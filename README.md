@@ -2,6 +2,7 @@
 
 ![Go](https://img.shields.io/badge/Go-1.23-blue)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
+![Redis](https://img.shields.io/badge/Redis-7-darkred)
 ![License](https://img.shields.io/badge/License-MIT-green)
 ![Build](https://img.shields.io/badge/Build-Passing-brightgreen)
 
@@ -24,7 +25,7 @@ The **Messenger Backend API** is a robust and scalable backend service built in 
 ## 🛠️ Tech Stack
 
 - **Language**: Go
-- **Database**: PostgreSQL (16 or higher)
+- **Database**: PostgreSQL (16 or higher), Redis (7 or higher)
 - **Framework**: Gorilla Mux
 - **Tools**: Makefile, `go-playground/validator`, `go-i18n`, `golang-migrate`
 - **Testing**: `testing` package (built-in)
@@ -37,7 +38,8 @@ The **Messenger Backend API** is a robust and scalable backend service built in 
 
 1. [Go](https://go.dev/dl/) 1.23 or higher installed.
 2. [PostgreSQL](https://www.postgresql.org/) database installed.
-3. [golang-migrate](https://github.com/golang-migrate/migrate) installed globally for managing database migrations.
+3. [Redis](https://redis.io/) database installed.
+4. [golang-migrate](https://github.com/golang-migrate/migrate) installed globally for managing database migrations.
 
 ### Clone the Repository
 
