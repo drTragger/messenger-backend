@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"github.com/drTragger/messenger-backend/internal/models"
 	"log"
 	"net/http"
 	"regexp"
@@ -22,6 +23,10 @@ func init() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	err = validate.RegisterValidation("messageType", validateMessageType)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ValidateStruct validates a struct based on its tags
@@ -32,6 +37,17 @@ func ValidateStruct(input interface{}) error {
 // validatePhoneNumber validates phone numbers for E.164 format of similar
 func validatePhoneNumber(fl validator.FieldLevel) bool {
 	return phoneRegex.MatchString(fl.Field().String())
+}
+
+// validateMessageType validates message type to fit models.MessageType
+func validateMessageType(fl validator.FieldLevel) bool {
+	messageType := fl.Field().String()
+	switch models.MessageType(messageType) {
+	case models.TextMessage, models.ImageMessage, models.VideoMessage, models.FileMessage, models.SystemMessage:
+		return true
+	default:
+		return false
+	}
 }
 
 // FormatValidationError formats validation errors into a user-friendly translated message

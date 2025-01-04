@@ -282,7 +282,7 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := int(claims["user_id"].(float64))
+	userID := uint(claims["user_id"].(float64))
 
 	// Concurrently delete old token and store new token
 	errChan := make(chan error, 2)
@@ -342,7 +342,7 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID := int(claims["user_id"].(float64))
+	userID := uint(claims["user_id"].(float64))
 
 	// Delete the token from Redis concurrently
 	errChan := make(chan error, 1)

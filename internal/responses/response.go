@@ -2,6 +2,7 @@ package responses
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 )
 
@@ -15,7 +16,7 @@ type Response struct {
 }
 
 // JSONResponse sends a standard JSON response
-func JSONResponse(w http.ResponseWriter, statusCode int, response Response) {
+func JSONResponse(w http.ResponseWriter, statusCode int, response *Response) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
@@ -23,7 +24,7 @@ func JSONResponse(w http.ResponseWriter, statusCode int, response Response) {
 
 // SuccessResponse sends a successful JSON response
 func SuccessResponse(w http.ResponseWriter, statusCode int, message string, data interface{}) {
-	response := Response{
+	response := &Response{
 		Success: true,
 		Message: message,
 		Data:    data,
@@ -33,7 +34,8 @@ func SuccessResponse(w http.ResponseWriter, statusCode int, message string, data
 
 // ErrorResponse sends an error JSON response
 func ErrorResponse(w http.ResponseWriter, statusCode int, message string, err string) {
-	response := Response{
+	log.Println(err)
+	response := &Response{
 		Success: false,
 		Message: message,
 		Error:   err,
@@ -41,8 +43,9 @@ func ErrorResponse(w http.ResponseWriter, statusCode int, message string, err st
 	JSONResponse(w, statusCode, response)
 }
 
+// ValidationResponse sends a validation error JSON response
 func ValidationResponse(w http.ResponseWriter, message string, fields map[string]string) {
-	response := Response{
+	response := &Response{
 		Success: false,
 		Message: message,
 		Fields:  fields,

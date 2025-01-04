@@ -18,26 +18,26 @@ func NewTokenRepository(client *redis.Client) *TokenRepository {
 }
 
 // StoreToken stores a token in Redis with an expiration time.
-func (repo *TokenRepository) StoreToken(ctx context.Context, token string, userID int, expiration time.Duration) error {
+func (repo *TokenRepository) StoreToken(ctx context.Context, token string, userID uint, expiration time.Duration) error {
 	key := fmt.Sprintf("user:%d:token:%s", userID, token)
 	return repo.Client.Set(ctx, key, "valid", expiration).Err()
 }
 
 // IsTokenValid checks if a token is valid (exists in Redis).
-func (repo *TokenRepository) IsTokenValid(ctx context.Context, token string, userID int) (bool, error) {
+func (repo *TokenRepository) IsTokenValid(ctx context.Context, token string, userID uint) (bool, error) {
 	key := fmt.Sprintf("user:%d:token:%s", userID, token)
 	exists, err := repo.Client.Exists(ctx, key).Result()
 	return exists == 1, err
 }
 
 // DeleteToken removes a token from Redis.
-func (repo *TokenRepository) DeleteToken(ctx context.Context, token string, userID int) error {
+func (repo *TokenRepository) DeleteToken(ctx context.Context, token string, userID uint) error {
 	key := fmt.Sprintf("user:%d:token:%s", userID, token)
 	return repo.Client.Del(ctx, key).Err()
 }
 
 // StoreVerificationCode stores the verification code for a phone number to Redis
-func (repo *TokenRepository) StoreVerificationCode(ctx context.Context, phone, code string, expiry time.Duration) error {
+func (repo *TokenRepository) StoreVerificationCode(ctx context.Context, phone string, code string, expiry time.Duration) error {
 	key := fmt.Sprintf("verification:%s", phone)
 	return repo.Client.Set(ctx, key, code, expiry).Err()
 }

@@ -30,7 +30,7 @@ func Auth(secret string, tokenRepo *repository.TokenRepository, trans *utils.Tra
 			}
 
 			claims := token.Claims.(jwt.MapClaims)
-			userID := int(claims["user_id"].(float64))
+			userID := uint(claims["user_id"].(float64))
 
 			// Verify the token in Redis
 			valid, err := tokenRepo.IsTokenValid(r.Context(), tokenString, userID)

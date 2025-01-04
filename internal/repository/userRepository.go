@@ -44,7 +44,7 @@ func (repo *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 }
 
 // GetUserByID fetches a user by ID
-func (repo *UserRepository) GetUserByID(userID int) (*models.User, error) {
+func (repo *UserRepository) GetUserByID(userID uint) (*models.User, error) {
 	query := `
 		SELECT id, username, phone, created_at, updated_at, phone_verified_at 
 		FROM users 

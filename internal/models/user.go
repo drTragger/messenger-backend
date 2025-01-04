@@ -3,7 +3,7 @@ package models
 import "time"
 
 type User struct {
-	ID              int        `json:"id"`
+	ID              uint       `json:"id"`
 	Username        string     `json:"username"`
 	Phone           string     `json:"phone"`
 	Password        string     `json:"-"` // Omit password in JSON responses
