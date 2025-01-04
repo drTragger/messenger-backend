@@ -18,7 +18,6 @@ func InitDB(cfg *config.Config) (*sql.DB, error) {
 		return nil, err
 	}
 
-	// Перевірка підключення
 	err = db.Ping()
 	if err != nil {
 		return nil, err

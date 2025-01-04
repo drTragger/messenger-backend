@@ -1,8 +1,11 @@
 package main
 
 import (
+	"github.com/drTragger/messenger-backend/internal/middleware"
+	"github.com/drTragger/messenger-backend/internal/utils"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/drTragger/messenger-backend/config"
 	"github.com/drTragger/messenger-backend/internal/handlers"
@@ -19,9 +22,22 @@ func main() {
 	}
 	defer db.Close()
 
-	r := mux.NewRouter()
+	// Initialize translator
+	translator := utils.NewTranslator()
 
-	handlers.RegisterRoutes(r)
+	// Initialize repository and handler
+	userRepo := repository.NewUserRepository(db)
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatalf("JWT_SECRET is not set in environment variables.")
+	}
+
+	authHandler := handlers.NewAuthHandler(userRepo, jwtSecret, translator)
+
+	// Setup routes
+	r := mux.NewRouter()
+	r.Use(middleware.LanguageMiddleware(utils.FallbackLang))
+	handlers.RegisterRoutes(r, authHandler)
 
 	log.Printf("Server running on %s", cfg.ServerPort)
 	if err := http.ListenAndServe(cfg.ServerPort, r); err != nil {

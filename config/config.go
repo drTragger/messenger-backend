@@ -17,7 +17,6 @@ type Config struct {
 }
 
 func LoadConfig() *Config {
-	// Завантаження .env файлу
 	err := godotenv.Load()
 	if err != nil {
 		log.Println("No .env file found, using default values")

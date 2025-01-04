@@ -1,4 +1,4 @@
-package handlers
+package responses
 
 import (
 	"encoding/json"
@@ -7,10 +7,11 @@ import (
 
 // Response represents the standard JSON response structure
 type Response struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Error   string      `json:"error,omitempty"`
+	Success bool              `json:"success"`
+	Message string            `json:"message,omitempty"`
+	Data    interface{}       `json:"data,omitempty"`
+	Error   string            `json:"error,omitempty"`
+	Fields  map[string]string `json:"fields,omitempty"`
 }
 
 // JSONResponse sends a standard JSON response
@@ -38,4 +39,13 @@ func ErrorResponse(w http.ResponseWriter, statusCode int, message string, err st
 		Error:   err,
 	}
 	JSONResponse(w, statusCode, response)
+}
+
+func ValidationResponse(w http.ResponseWriter, message string, fields map[string]string) {
+	response := Response{
+		Success: false,
+		Message: message,
+		Fields:  fields,
+	}
+	JSONResponse(w, http.StatusUnprocessableEntity, response)
 }

@@ -1,0 +1,19 @@
+{
+  "errors": {
+    "input": "Nieprawidłowe dane.",
+    "validation": "Błąd walidacji.",
+    "server": "Błąd serwera.",
+    "credentials": "Nieprawidłowy adres e-mail lub hasło.",
+    "auth": "Błąd uwierzytelniania."
+  },
+  "success": {
+    "register": "Użytkownik został pomyślnie zarejestrowany.",
+    "login": "Logowanie zakończone sukcesem."
+  },
+  "validation": {
+    "required": "To pole jest wymagane.",
+    "min": "To pole musi mieć co najmniej {{.Param}} znaków.",
+    "email": "To pole musi być prawidłowym adresem e-mail.",
+    "unique": "Takie pole już istnieje."
+  }
+}
