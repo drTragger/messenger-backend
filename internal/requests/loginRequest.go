@@ -2,6 +2,6 @@ package requests
 
 // LoginRequest defines the payload for the login endpoint
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
+	Phone    string `json:"phone" validate:"required,phone"`
 	Password string `json:"password" validate:"required"`
 }

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/drTragger/messenger-backend/internal/models"
+	"time"
 )
 
 type UserRepository struct {
@@ -17,25 +18,25 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 // CreateUser inserts a new user into the database
 func (repo *UserRepository) CreateUser(user *models.User) error {
 	query := `
-		INSERT INTO users (username, email, password) 
+		INSERT INTO users (username, phone, password) 
 		VALUES ($1, $2, $3)
 	`
-	_, err := repo.DB.Exec(query, user.Username, user.Email, user.Password)
+	_, err := repo.DB.Exec(query, user.Username, user.Phone, user.Password)
 	return err
 }
 
-// GetUserByEmail fetches a user by email
-func (repo *UserRepository) GetUserByEmail(email string) (*models.User, error) {
+// GetUserByPhone fetches a user by phone
+func (repo *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 	query := `
-		SELECT id, username, email, password, created_at, updated_at 
+		SELECT id, username, phone, password, created_at, updated_at, phone_verified_at 
 		FROM users 
-		WHERE email = $1
+		WHERE phone = $1
 	`
 
-	row := repo.DB.QueryRow(query, email)
+	row := repo.DB.QueryRow(query, phone)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.Password, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -45,7 +46,7 @@ func (repo *UserRepository) GetUserByEmail(email string) (*models.User, error) {
 // GetUserByID fetches a user by ID
 func (repo *UserRepository) GetUserByID(userID int) (*models.User, error) {
 	query := `
-		SELECT id, username, email, created_at, updated_at 
+		SELECT id, username, phone, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE id = $1
 	`
@@ -53,7 +54,7 @@ func (repo *UserRepository) GetUserByID(userID int) (*models.User, error) {
 	row := repo.DB.QueryRow(query, userID)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -62,7 +63,7 @@ func (repo *UserRepository) GetUserByID(userID int) (*models.User, error) {
 
 func (repo *UserRepository) GetUserByUsername(username string) (*models.User, error) {
 	query := `
-		SELECT id, username, email, created_at, updated_at 
+		SELECT id, username, phone, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE username = $1
 	`
@@ -70,9 +71,20 @@ func (repo *UserRepository) GetUserByUsername(username string) (*models.User, er
 	row := repo.DB.QueryRow(query, username)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.CreatedAt, &user.UpdatedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
 	return user, err
+}
+
+func (repo *UserRepository) VerifyPhone(phone string) error {
+	query := `
+		UPDATE users
+		SET phone_verified_at = $1
+		WHERE phone = $2;
+	`
+
+	_, err := repo.DB.Exec(query, time.Now(), phone)
+	return err
 }

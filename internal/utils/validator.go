@@ -3,21 +3,35 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
 
-var validate *validator.Validate
+var (
+	validate   *validator.Validate
+	phoneRegex = regexp.MustCompile(`^\+?[1-9][0-9]{9,14}$`) // Regex for E.164 format or similar
+)
 
 func init() {
 	validate = validator.New()
+	err := validate.RegisterValidation("phone", validatePhoneNumber)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 // ValidateStruct validates a struct based on its tags
 func ValidateStruct(input interface{}) error {
 	return validate.Struct(input)
+}
+
+// validatePhoneNumber validates phone numbers for E.164 format of similar
+func validatePhoneNumber(fl validator.FieldLevel) bool {
+	return phoneRegex.MatchString(fl.Field().String())
 }
 
 // FormatValidationError formats validation errors into a user-friendly translated message

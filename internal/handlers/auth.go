@@ -8,6 +8,7 @@ import (
 	"github.com/drTragger/messenger-backend/internal/requests"
 	"github.com/drTragger/messenger-backend/internal/responses"
 	"github.com/drTragger/messenger-backend/internal/utils"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -18,7 +19,9 @@ import (
 )
 
 const (
-	TokenExpire = 24 * time.Hour
+	TokenExpire            = 24 * time.Hour
+	VerificationCodeLength = 6
+	VerificationCodeExpire = 5 * time.Minute
 )
 
 type AuthHandler struct {
@@ -55,7 +58,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userExists, err := h.UserRepo.GetUserByEmail(payload.Email)
+	userExists, err := h.UserRepo.GetUserByPhone(payload.Phone)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
@@ -63,7 +66,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	if userExists != nil {
 		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), map[string]string{
-			"email": h.Trans.Translate(r, "validation.unique", nil),
+			"phone": h.Trans.Translate(r, "validation.unique", nil),
 		})
 		return
 	}
@@ -89,7 +92,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 	user := models.User{
 		Username: payload.Username,
-		Email:    payload.Email,
+		Phone:    payload.Phone,
 		Password: string(hashedPassword),
 	}
 
@@ -99,7 +102,91 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate verification code
+	verificationCode := utils.GenerateRandomCode(VerificationCodeLength)
+
+	// Create a channel to capture errors
+	errChan := make(chan error, 2)
+
+	// Use a goroutine to store the verification code in Redis
+	go func() {
+		errChan <- h.TokenRepo.StoreVerificationCode(r.Context(), user.Phone, verificationCode, VerificationCodeExpire)
+	}()
+
+	// Use another goroutine to send the SMS
+	go func() {
+		smsClient := utils.NewSMSClient()
+		errChan <- smsClient.SendSMS(
+			payload.Phone,
+			h.Trans.Translate(r, "notifications.welcome", map[string]interface{}{
+				"Username": user.Username,
+				"Code":     verificationCode,
+				"Expires":  VerificationCodeExpire.Minutes(),
+			}),
+		)
+	}()
+
+	// Wait for both operations to complete
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+			return
+		}
+	}
+
 	responses.SuccessResponse(w, http.StatusCreated, h.Trans.Translate(r, "success.register", nil), nil)
+}
+
+// VerifyCode verifies phone number verification code
+func (h *AuthHandler) VerifyCode(w http.ResponseWriter, r *http.Request) {
+	var payload requests.VerifyCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
+		return
+	}
+
+	if err := utils.ValidateStruct(&payload); err != nil {
+		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), utils.FormatValidationError(r, err, h.Trans))
+		return
+	}
+
+	// Retrieve the code from Redis
+	ctx := r.Context()
+	storedCode, err := h.TokenRepo.GetVerificationCode(ctx, payload.Phone)
+	if err != nil || storedCode != payload.Code {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.code.invalid", nil), "Invalid verification code.")
+		return
+	}
+
+	// Create a channel to capture errors from goroutines
+	errChan := make(chan error, 2)
+
+	// Use a goroutine to mark the phone as verified in the database
+	go func() {
+		if err := h.UserRepo.VerifyPhone(payload.Phone); err != nil {
+			errChan <- err
+		} else {
+			errChan <- nil
+		}
+	}()
+
+	// Use another goroutine to delete the verification code from Redis
+	go func() {
+		if err := h.TokenRepo.DeleteVerificationCode(ctx, payload.Phone); err != nil {
+			log.Printf("Failed to delete verification code: %s", err)
+		}
+		errChan <- nil
+	}()
+
+	// Wait for both operations to complete and check for errors
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "An error occurred while processing the request.")
+			return
+		}
+	}
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.phone_verification", nil), nil)
 }
 
 // Login handles user login
@@ -115,7 +202,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := h.UserRepo.GetUserByEmail(payload.Email)
+	user, err := h.UserRepo.GetUserByPhone(payload.Phone)
 	if err != nil || user == nil {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.credentials", nil), h.Trans.Translate(r, "errors.auth", nil))
 		return
@@ -123,6 +210,11 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password)); err != nil {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.credentials", nil), h.Trans.Translate(r, "errors.auth", nil))
+		return
+	}
+
+	if user.PhoneVerifiedAt == nil {
+		responses.ErrorResponse(w, http.StatusForbidden, h.Trans.Translate(r, "errors.code.unverified", nil), "Phone not verified.")
 		return
 	}
 
@@ -136,9 +228,13 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Store token in Redis
-	err = h.TokenRepo.StoreToken(r.Context(), tokenString, user.ID, TokenExpire)
-	if err != nil {
+	// Store token in Redis concurrently
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- h.TokenRepo.StoreToken(r.Context(), tokenString, user.ID, TokenExpire)
+	}()
+
+	if err := <-errChan; err != nil {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to store token.")
 		return
 	}
@@ -163,7 +259,6 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse and validate the token
 	token, err := jwt.Parse(payload.Token, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New(h.Trans.Translate(r, "errors.token.signing_method", nil))
@@ -189,14 +284,12 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 	userID := int(claims["user_id"].(float64))
 
-	// Invalidate the old token in Redis
-	err = h.TokenRepo.DeleteToken(r.Context(), payload.Token, userID)
-	if err != nil {
-		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to invalidate token.")
-		return
-	}
+	// Concurrently delete old token and store new token
+	errChan := make(chan error, 2)
+	go func() {
+		errChan <- h.TokenRepo.DeleteToken(r.Context(), payload.Token, userID)
+	}()
 
-	// Generate a new token
 	newTokenExpire := time.Now().Add(TokenExpire).Unix()
 	newTokenString, err := utils.GenerateJWT(h.Secret, jwt.MapClaims{
 		"user_id": userID,
@@ -206,15 +299,18 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
 	}
+	go func() {
+		errChan <- h.TokenRepo.StoreToken(r.Context(), newTokenString, userID, TokenExpire)
+	}()
 
-	// Store the new token in Redis
-	err = h.TokenRepo.StoreToken(r.Context(), newTokenString, userID, TokenExpire)
-	if err != nil {
-		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to store new token.")
-		return
+	// Wait for both operations to complete
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to update token.")
+			return
+		}
 	}
 
-	// Return the new token
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.refresh_token", nil), responses.TokenResponse{
 		Token:   newTokenString,
 		Expires: newTokenExpire,
@@ -223,14 +319,12 @@ func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
 
 // Logout handles user logout
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	// Extract the token from the Authorization header
 	tokenString := strings.TrimSpace(strings.Replace(r.Header.Get("Authorization"), "Bearer", "", 1))
 	if tokenString == "" {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.unauthorized", nil), "Token not provided")
 		return
 	}
 
-	// Parse and validate the token
 	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
 		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New(h.Trans.Translate(r, "errors.token.signing_method", nil))
@@ -242,7 +336,6 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract claims to get user ID
 	claims, ok := token.Claims.(jwt.MapClaims)
 	if !ok {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.invalid", nil), "Invalid token claims")
@@ -251,13 +344,16 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	userID := int(claims["user_id"].(float64))
 
-	// Delete the token from Redis
-	err = h.TokenRepo.DeleteToken(r.Context(), tokenString, userID)
-	if err != nil {
+	// Delete the token from Redis concurrently
+	errChan := make(chan error, 1)
+	go func() {
+		errChan <- h.TokenRepo.DeleteToken(r.Context(), tokenString, userID)
+	}()
+
+	if err := <-errChan; err != nil {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to delete token.")
 		return
 	}
 
-	// Respond with success
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.logout", nil), nil)
 }

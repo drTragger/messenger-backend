@@ -14,6 +14,7 @@ func RegisterRoutes(r *mux.Router, authHandler *AuthHandler) {
 	apiRouter.HandleFunc("/login", authHandler.Login).Methods("POST")
 	apiRouter.HandleFunc("/refresh-token", authHandler.RefreshToken).Methods("POST")
 	apiRouter.HandleFunc("/logout", authHandler.Logout).Methods("POST")
+	apiRouter.HandleFunc("/phone/verify", authHandler.VerifyCode).Methods("POST")
 
 	// Example of a protected route
 	apiRouter.Handle("/profile", middleware.Auth(authHandler.Secret, authHandler.TokenRepo, authHandler.Trans)(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

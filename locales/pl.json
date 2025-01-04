@@ -3,25 +3,34 @@
     "input": "Nieprawidłowe dane.",
     "validation": "Błąd walidacji.",
     "server": "Błąd serwera.",
-    "credentials": "Nieprawidłowy adres e-mail lub hasło.",
-    "auth": "Błąd uwierzytelniania.",
-    "unauthorized": "Nieautoryzowany dostęp.",
+    "credentials": "Nieprawidłowy numer telefonu lub hasło.",
+    "auth": "Błąd autoryzacji.",
+    "unauthorized": "Brak autoryzacji.",
     "token": {
-      "signing_method": "Nieoczekiwana metoda podpisywania.",
-      "invalid": "Nieprawidłowy token odświeżania.",
-      "expired": "Nieprawidłowy token odświeżania."
+      "signing_method": "Nieoczekiwana metoda podpisu.",
+      "invalid": "Nieprawidłowy token.",
+      "expired": "Token wygasł."
+    },
+    "code": {
+      "invalid": "Nieprawidłowy kod weryfikacyjny.",
+      "unverified": "Twój numer telefonu nie został zweryfikowany."
     }
   },
   "success": {
-    "register": "Użytkownik został pomyślnie zarejestrowany.",
+    "register": "Rejestracja użytkownika zakończona sukcesem.",
     "login": "Logowanie zakończone sukcesem.",
     "refresh_token": "Token został pomyślnie odświeżony.",
-    "logout": "Wylogowanie zakończone sukcesem."
+    "logout": "Wylogowanie zakończone sukcesem.",
+    "phone_verification": "Numer telefonu został pomyślnie zweryfikowany."
   },
   "validation": {
     "required": "To pole jest wymagane.",
-    "min": "To pole musi zawierać co najmniej {{.Param}} znaków.",
-    "email": "To pole musi zawierać prawidłowy adres e-mail.",
-    "unique": "Takie pole już istnieje."
+    "min": "Pole musi mieć co najmniej {{.Param}} znaków.",
+    "email": "Pole musi zawierać poprawny adres e-mail.",
+    "unique": "Taka wartość już istnieje.",
+    "phone": "Nieprawidłowy format numeru telefonu. Proszę podać kod kraju."
+  },
+  "notifications": {
+    "welcome": "Witamy, {{.Username}}!\nRejestracja została zakończona.\n\nOto Twój kod: {{.Code}}.\n\nKod jest ważny przez {{.Expires}} minut."
   }
 }

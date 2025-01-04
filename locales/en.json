@@ -8,20 +8,29 @@
     "unauthorized": "Unauthorized.",
     "token": {
       "signing_method": "Unexpected signing method.",
-      "invalid": "Invalid refresh token.",
-      "expired": "Invalid refresh token."
+      "invalid": "Invalid token.",
+      "expired": "Token expired."
+    },
+    "code": {
+      "invalid": "Invalid verification code.",
+      "unverified": "Your phone number was not verified."
     }
   },
   "success": {
     "register": "User registered successfully.",
     "login": "Login successful.",
     "refresh_token": "Token refreshed successfully.",
-    "logout": "Logout successful."
+    "logout": "Logout successful.",
+    "phone_verification": "Phone verification successful."
   },
   "validation": {
     "required": "This field is required.",
     "min": "This field must be at least {{.Param}} characters.",
     "email": "This field must be a valid email address.",
-    "unique": "Such field already exists."
+    "unique": "Such field already exists.",
+    "phone": "Invalid phone number format. Please include a country code."
+  },
+  "notifications": {
+    "welcome": "Welcome {{.Username}}!\nYour registration is complete.\n\nHere is your code: {{.Code}}.\n\nCode expires in {{.Expires}} minutes."
   }
 }
