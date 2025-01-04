@@ -21,7 +21,10 @@
     "login": "Logowanie zakończone sukcesem.",
     "refresh_token": "Token został pomyślnie odświeżony.",
     "logout": "Wylogowanie zakończone sukcesem.",
-    "phone_verification": "Numer telefonu został pomyślnie zweryfikowany."
+    "phone_verification": "Numer telefonu został pomyślnie zweryfikowany.",
+    "message": {
+      "send": "Wiadomość została pomyślnie wysłana."
+    }
   },
   "validation": {
     "required": "To pole jest wymagane.",
