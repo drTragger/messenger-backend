@@ -4,11 +4,19 @@
     "validation": "Validation error.",
     "server": "Server error.",
     "credentials": "Invalid email or password.",
-    "auth": "Authentication failed."
+    "auth": "Authentication failed.",
+    "unauthorized": "Unauthorized.",
+    "token": {
+      "signing_method": "Unexpected signing method.",
+      "invalid": "Invalid refresh token.",
+      "expired": "Invalid refresh token."
+    }
   },
   "success": {
     "register": "User registered successfully.",
-    "login": "Login successful."
+    "login": "Login successful.",
+    "refresh_token": "Token refreshed successfully.",
+    "logout": "Logout successful."
   },
   "validation": {
     "required": "This field is required.",

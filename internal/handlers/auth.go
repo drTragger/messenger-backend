@@ -9,6 +9,7 @@ import (
 	"github.com/drTragger/messenger-backend/internal/responses"
 	"github.com/drTragger/messenger-backend/internal/utils"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/drTragger/messenger-backend/internal/repository"
@@ -16,17 +17,28 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	TokenExpire = 24 * time.Hour
+)
+
 type AuthHandler struct {
-	UserRepo *repository.UserRepository
-	Secret   string
-	Trans    *utils.Translator
+	UserRepo  *repository.UserRepository
+	TokenRepo *repository.TokenRepository
+	Secret    string
+	Trans     *utils.Translator
 }
 
-func NewAuthHandler(repo *repository.UserRepository, secret string, trans *utils.Translator) *AuthHandler {
+func NewAuthHandler(
+	ur *repository.UserRepository,
+	tr *repository.TokenRepository,
+	secret string,
+	trans *utils.Translator,
+) *AuthHandler {
 	return &AuthHandler{
-		UserRepo: repo,
-		Secret:   secret,
-		Trans:    trans,
+		UserRepo:  ur,
+		TokenRepo: tr,
+		Secret:    secret,
+		Trans:     trans,
 	}
 }
 
@@ -59,6 +71,7 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	usernameExists, err := h.UserRepo.GetUserByUsername(payload.Username)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
 	}
 
 	if usernameExists != nil {
@@ -91,42 +104,160 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 
 // Login handles user login
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
-	var credentials requests.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&credentials); err != nil {
+	var payload requests.LoginRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
 		return
 	}
 
-	if err := utils.ValidateStruct(&credentials); err != nil {
+	if err := utils.ValidateStruct(&payload); err != nil {
 		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), utils.FormatValidationError(r, err, h.Trans))
 		return
 	}
 
-	user, err := h.UserRepo.GetUserByEmail(credentials.Email)
+	user, err := h.UserRepo.GetUserByEmail(payload.Email)
 	if err != nil || user == nil {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.credentials", nil), h.Trans.Translate(r, "errors.auth", nil))
 		return
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(payload.Password)); err != nil {
 		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.credentials", nil), h.Trans.Translate(r, "errors.auth", nil))
 		return
 	}
 
-	tokenExpire := time.Now().Add(24 * time.Hour).Unix()
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	tokenExpire := time.Now().Add(TokenExpire).Unix()
+	tokenString, err := utils.GenerateJWT(h.Secret, jwt.MapClaims{
 		"user_id": user.ID,
 		"exp":     tokenExpire,
 	})
-	tokenString, err := token.SignedString([]byte(h.Secret))
 	if err != nil {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
 	}
 
-	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.login", nil), responses.LoginResponse{
-		Token:  tokenString,
-		Expire: tokenExpire,
+	// Store token in Redis
+	err = h.TokenRepo.StoreToken(r.Context(), tokenString, user.ID, TokenExpire)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to store token.")
+		return
+	}
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.login", nil), responses.TokenResponse{
+		Token:   tokenString,
+		Expires: tokenExpire,
 	})
+}
+
+// RefreshToken refreshes JWT token
+func (h *AuthHandler) RefreshToken(w http.ResponseWriter, r *http.Request) {
+	var payload requests.RefreshTokenRequest
+
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
+		return
+	}
+
+	if err := utils.ValidateStruct(&payload); err != nil {
+		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), utils.FormatValidationError(r, err, h.Trans))
+		return
+	}
+
+	// Parse and validate the token
+	token, err := jwt.Parse(payload.Token, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New(h.Trans.Translate(r, "errors.token.signing_method", nil))
+		}
+		return []byte(h.Secret), nil
+	})
+	if err != nil || !token.Valid {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.invalid", nil), "Invalid token")
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.invalid", nil), "Invalid token claims")
+		return
+	}
+
+	exp, ok := claims["exp"].(float64)
+	if !ok || float64(time.Now().Unix()) > exp {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.expired", nil), "Token expired")
+		return
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	// Invalidate the old token in Redis
+	err = h.TokenRepo.DeleteToken(r.Context(), payload.Token, userID)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to invalidate token.")
+		return
+	}
+
+	// Generate a new token
+	newTokenExpire := time.Now().Add(TokenExpire).Unix()
+	newTokenString, err := utils.GenerateJWT(h.Secret, jwt.MapClaims{
+		"user_id": userID,
+		"exp":     newTokenExpire,
+	})
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	// Store the new token in Redis
+	err = h.TokenRepo.StoreToken(r.Context(), newTokenString, userID, TokenExpire)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to store new token.")
+		return
+	}
+
+	// Return the new token
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.refresh_token", nil), responses.TokenResponse{
+		Token:   newTokenString,
+		Expires: newTokenExpire,
+	})
+}
+
+// Logout handles user logout
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	// Extract the token from the Authorization header
+	tokenString := strings.TrimSpace(strings.Replace(r.Header.Get("Authorization"), "Bearer", "", 1))
+	if tokenString == "" {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.unauthorized", nil), "Token not provided")
+		return
+	}
+
+	// Parse and validate the token
+	token, err := jwt.Parse(tokenString, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New(h.Trans.Translate(r, "errors.token.signing_method", nil))
+		}
+		return []byte(h.Secret), nil
+	})
+	if err != nil || !token.Valid {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.invalid", nil), "Invalid token")
+		return
+	}
+
+	// Extract claims to get user ID
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		responses.ErrorResponse(w, http.StatusUnauthorized, h.Trans.Translate(r, "errors.token.invalid", nil), "Invalid token claims")
+		return
+	}
+
+	userID := int(claims["user_id"].(float64))
+
+	// Delete the token from Redis
+	err = h.TokenRepo.DeleteToken(r.Context(), tokenString, userID)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to delete token.")
+		return
+	}
+
+	// Respond with success
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.logout", nil), nil)
 }

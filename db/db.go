@@ -1,8 +1,9 @@
-package repository
+package db
 
 import (
 	"database/sql"
 	"fmt"
+	"log"
 
 	"github.com/drTragger/messenger-backend/config"
 	_ "github.com/lib/pq" // PostgreSQL driver
@@ -23,6 +24,6 @@ func InitDB(cfg *config.Config) (*sql.DB, error) {
 		return nil, err
 	}
 
-	fmt.Println("Successfully connected to the database")
+	log.Println("Successfully connected to the database")
 	return db, nil
 }

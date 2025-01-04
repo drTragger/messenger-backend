@@ -4,16 +4,24 @@
     "validation": "Błąd walidacji.",
     "server": "Błąd serwera.",
     "credentials": "Nieprawidłowy adres e-mail lub hasło.",
-    "auth": "Błąd uwierzytelniania."
+    "auth": "Błąd uwierzytelniania.",
+    "unauthorized": "Nieautoryzowany dostęp.",
+    "token": {
+      "signing_method": "Nieoczekiwana metoda podpisywania.",
+      "invalid": "Nieprawidłowy token odświeżania.",
+      "expired": "Nieprawidłowy token odświeżania."
+    }
   },
   "success": {
     "register": "Użytkownik został pomyślnie zarejestrowany.",
-    "login": "Logowanie zakończone sukcesem."
+    "login": "Logowanie zakończone sukcesem.",
+    "refresh_token": "Token został pomyślnie odświeżony.",
+    "logout": "Wylogowanie zakończone sukcesem."
   },
   "validation": {
     "required": "To pole jest wymagane.",
-    "min": "To pole musi mieć co najmniej {{.Param}} znaków.",
-    "email": "To pole musi być prawidłowym adresem e-mail.",
+    "min": "To pole musi zawierać co najmniej {{.Param}} znaków.",
+    "email": "To pole musi zawierać prawidłowy adres e-mail.",
     "unique": "Takie pole już istnieje."
   }
 }

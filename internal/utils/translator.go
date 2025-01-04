@@ -2,13 +2,15 @@ package utils
 
 import (
 	"encoding/json"
-	"github.com/drTragger/messenger-backend/internal/middleware"
 	"github.com/nicksnyder/go-i18n/v2/i18n"
 	"golang.org/x/text/language"
 	"log"
 	"net/http"
 )
 
+type ContextKey string
+
+const LanguageKey ContextKey = "language"
 const FallbackLang = "en"
 
 type Translator struct {
@@ -56,7 +58,7 @@ func (t *Translator) Translate(r *http.Request, messageID string, data map[strin
 
 // GetLocale retrieves the language from the request context.
 func GetLocale(r *http.Request) string {
-	lang, _ := r.Context().Value(middleware.LanguageKey).(string)
+	lang, _ := r.Context().Value(LanguageKey).(string)
 	if lang == "" {
 		lang = FallbackLang // Default to English
 	}

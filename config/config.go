@@ -13,6 +13,8 @@ type Config struct {
 	DBUser     string
 	DBPassword string
 	DBName     string
+	RedisHost  string
+	RedisPort  string
 	ServerPort string
 }
 
@@ -28,6 +30,8 @@ func LoadConfig() *Config {
 		DBUser:     getEnv("DB_USER", "postgres"),
 		DBPassword: getEnv("DB_PASSWORD", "password"),
 		DBName:     getEnv("DB_NAME", "messenger"),
+		RedisHost:  getEnv("REDIS_HOST", "localhost"),
+		RedisPort:  getEnv("REDIS_PORT", "6379"),
 		ServerPort: getEnv("SERVER_PORT", ":8080"),
 	}
 }

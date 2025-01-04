@@ -2,12 +2,9 @@ package middleware
 
 import (
 	"context"
+	"github.com/drTragger/messenger-backend/internal/utils"
 	"net/http"
 )
-
-type ContextKey string
-
-const LanguageKey ContextKey = "language"
 
 func LanguageMiddleware(defaultLang string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -20,7 +17,7 @@ func LanguageMiddleware(defaultLang string) func(http.Handler) http.Handler {
 				lang = defaultLang
 			}
 
-			ctx := context.WithValue(r.Context(), LanguageKey, lang)
+			ctx := context.WithValue(r.Context(), utils.LanguageKey, lang)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

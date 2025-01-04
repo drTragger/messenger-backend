@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+	"github.com/drTragger/messenger-backend/db"
 	"github.com/drTragger/messenger-backend/internal/middleware"
 	"github.com/drTragger/messenger-backend/internal/utils"
 	"log"
@@ -16,23 +18,31 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
-	db, err := repository.InitDB(cfg)
+	// Initialize Postgres DB
+	pdb, err := db.InitDB(cfg)
 	if err != nil {
 		log.Fatalf("Cannot connect to database: %v", err)
 	}
-	defer db.Close()
+	defer pdb.Close()
+
+	// Initialize Redis DB
+	rdb, err := db.InitRedis(fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort))
+	if err != nil {
+		log.Fatalf("Cannot connect to Redis: %v", err)
+	}
 
 	// Initialize translator
 	translator := utils.NewTranslator()
 
 	// Initialize repository and handler
-	userRepo := repository.NewUserRepository(db)
+	userRepo := repository.NewUserRepository(pdb)
+	tokenRepo := repository.NewTokenRepository(rdb)
 	jwtSecret := os.Getenv("JWT_SECRET")
 	if jwtSecret == "" {
 		log.Fatalf("JWT_SECRET is not set in environment variables.")
 	}
 
-	authHandler := handlers.NewAuthHandler(userRepo, jwtSecret, translator)
+	authHandler := handlers.NewAuthHandler(userRepo, tokenRepo, jwtSecret, translator)
 
 	// Setup routes
 	r := mux.NewRouter()
