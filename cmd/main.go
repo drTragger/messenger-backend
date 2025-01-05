@@ -2,17 +2,17 @@ package main
 
 import (
 	"fmt"
-	"github.com/drTragger/messenger-backend/db"
-	"github.com/drTragger/messenger-backend/internal/middleware"
-	"github.com/drTragger/messenger-backend/internal/utils"
-	"github.com/drTragger/messenger-backend/internal/websocket"
 	"log"
 	"net/http"
 	"os"
 
 	"github.com/drTragger/messenger-backend/config"
+	"github.com/drTragger/messenger-backend/db"
 	"github.com/drTragger/messenger-backend/internal/handlers"
+	"github.com/drTragger/messenger-backend/internal/middleware"
 	"github.com/drTragger/messenger-backend/internal/repository"
+	"github.com/drTragger/messenger-backend/internal/utils"
+	"github.com/drTragger/messenger-backend/internal/websocket"
 	"github.com/gorilla/mux"
 )
 
@@ -36,7 +36,7 @@ func main() {
 	clientManager := websocket.NewClientManager()
 
 	// Initialize translator
-	translator := utils.NewTranslator()
+	translator := utils.NewTranslator(getBasePath())
 
 	// Initialize repository and handler
 	userRepo := repository.NewUserRepository(pdb)
@@ -60,4 +60,14 @@ func main() {
 	if err := http.ListenAndServe(cfg.ServerPort, r); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+func getBasePath() string {
+	// Get the current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatalf("Failed to get working directory: %v", err)
+	}
+
+	return cwd
 }

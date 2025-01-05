@@ -18,20 +18,20 @@ type Translator struct {
 }
 
 // NewTranslator initializes the translation bundle and loads the translation files.
-func NewTranslator() *Translator {
+func NewTranslator(basePath string) *Translator {
 	bundle := i18n.NewBundle(language.English) // Default language
 	bundle.RegisterUnmarshalFunc("json", json.Unmarshal)
 
 	// Load translation files
-	_, err := bundle.LoadMessageFile("./locales/en.json")
+	_, err := bundle.LoadMessageFile(basePath + "/locales/en.json")
 	if err != nil {
 		log.Fatalf("Failed to load en.json: %v", err)
 	}
-	_, err = bundle.LoadMessageFile("./locales/uk.json")
+	_, err = bundle.LoadMessageFile(basePath + "/locales/uk.json")
 	if err != nil {
 		log.Fatalf("Failed to load uk.json: %v", err)
 	}
-	_, err = bundle.LoadMessageFile("./locales/pl.json")
+	_, err = bundle.LoadMessageFile(basePath + "/locales/pl.json")
 	if err != nil {
 		log.Fatalf("Failed to load pl.json: %v", err)
 	}
