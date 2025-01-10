@@ -1,40 +1,40 @@
 {
   "errors": {
-    "input": "Invalid input.",
+    "input": "Invalid data.",
     "validation": "Validation error.",
     "server": "Server error.",
-    "credentials": "Invalid email or password.",
-    "auth": "Authentication failed.",
+    "credentials": "Incorrect phone number or password.",
+    "auth": "Authentication error.",
     "unauthorized": "Unauthorized.",
     "token": {
       "signing_method": "Unexpected signing method.",
       "invalid": "Invalid token.",
-      "expired": "Token expired."
+      "expired": "Token has expired."
     },
     "code": {
       "invalid": "Invalid verification code.",
-      "unverified": "Your phone number was not verified."
+      "unverified": "Your phone number is not verified."
     }
   },
   "success": {
-    "register": "User registered successfully.",
+    "register": "User successfully registered.",
     "login": "Login successful.",
-    "refresh_token": "Token refreshed successfully.",
+    "refresh_token": "Token successfully refreshed.",
     "logout": "Logout successful.",
-    "phone_verification": "Phone verification successful.",
+    "phone_verification": "Phone successfully verified.",
     "message": {
-      "send": "Message sent successfully."
+      "send": "Message sent successfully.",
+      "get_list": "Messages retrieved successfully."
     }
   },
   "validation": {
     "required": "This field is required.",
-    "min": "This field must be at least {{.Param}} characters.",
-    "email": "This field must be a valid email address.",
-    "unique": "Such field already exists.",
-    "phone": "Invalid phone number format. Please include a country code.",
-    "exists": "The provided field does not exist in our records."
+    "min": "The field must contain at least {{.Param}} characters.",
+    "email": "The field must be a valid email address.",
+    "unique": "This value already exists.",
+    "phone": "Invalid phone number format. Please include the country code."
   },
   "notifications": {
-    "welcome": "Welcome {{.Username}}!\nYour registration is complete.\n\nHere is your code: {{.Code}}.\n\nCode expires in {{.Expires}} minutes."
+    "welcome": "Welcome, {{.Username}}!\nRegistration is complete.\n\nHere is your code: {{.Code}}.\n\nThe code is valid for {{.Expires}} minutes."
   }
 }

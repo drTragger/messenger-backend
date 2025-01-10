@@ -53,6 +53,7 @@ func main() {
 
 	// Setup routes
 	r := mux.NewRouter()
+	r.Use(middleware.CORS())
 	r.Use(middleware.LanguageMiddleware(utils.FallbackLang))
 	handlers.RegisterRoutes(r, authHandler, messageHandler, wsHandler)
 

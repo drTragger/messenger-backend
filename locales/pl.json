@@ -4,7 +4,7 @@
     "validation": "Błąd walidacji.",
     "server": "Błąd serwera.",
     "credentials": "Nieprawidłowy numer telefonu lub hasło.",
-    "auth": "Błąd autoryzacji.",
+    "auth": "Błąd uwierzytelniania.",
     "unauthorized": "Brak autoryzacji.",
     "token": {
       "signing_method": "Nieoczekiwana metoda podpisu.",
@@ -17,23 +17,24 @@
     }
   },
   "success": {
-    "register": "Rejestracja użytkownika zakończona sukcesem.",
+    "register": "Użytkownik zarejestrowany pomyślnie.",
     "login": "Logowanie zakończone sukcesem.",
     "refresh_token": "Token został pomyślnie odświeżony.",
-    "logout": "Wylogowanie zakończone sukcesem.",
+    "logout": "Wylogowano pomyślnie.",
     "phone_verification": "Numer telefonu został pomyślnie zweryfikowany.",
     "message": {
-      "send": "Wiadomość została pomyślnie wysłana."
+      "send": "Wiadomość została wysłana.",
+      "get_list": "Wiadomości zostały pobrane."
     }
   },
   "validation": {
     "required": "To pole jest wymagane.",
-    "min": "Pole musi mieć co najmniej {{.Param}} znaków.",
-    "email": "Pole musi zawierać poprawny adres e-mail.",
-    "unique": "Taka wartość już istnieje.",
-    "phone": "Nieprawidłowy format numeru telefonu. Proszę podać kod kraju."
+    "min": "Pole musi zawierać co najmniej {{.Param}} znaków.",
+    "email": "Pole musi zawierać prawidłowy adres e-mail.",
+    "unique": "Ta wartość już istnieje.",
+    "phone": "Nieprawidłowy format numeru telefonu. Podaj kod kraju."
   },
   "notifications": {
-    "welcome": "Witamy, {{.Username}}!\nRejestracja została zakończona.\n\nOto Twój kod: {{.Code}}.\n\nKod jest ważny przez {{.Expires}} minut."
+    "welcome": "Witamy, {{.Username}}!\nRejestracja zakończona.\n\nOto Twój kod: {{.Code}}.\n\nKod jest ważny przez {{.Expires}} minut."
   }
 }
