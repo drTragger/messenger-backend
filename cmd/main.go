@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/drTragger/messenger-backend/internal/storage"
 	"log"
 	"net/http"
 	"os"
@@ -43,6 +44,16 @@ func main() {
 	// Initialize translator
 	translator := utils.NewTranslator(getBasePath())
 
+	// Initialize storage
+	storageConfig := storage.Config{
+		Type:      storage.LocalStorageType,
+		LocalPath: storage.LocalStoragePath,
+	}
+	storageInst, err := storage.NewStorage(&storageConfig)
+	if err != nil {
+		log.Fatalf("Cannot initialize storage: %v", err)
+	}
+
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(pdb)
 	tokenRepo := repository.NewTokenRepository(rdb)
@@ -53,7 +64,7 @@ func main() {
 	authHandler := handlers.NewAuthHandler(userRepo, tokenRepo, jwtSecret, translator)
 	messageHandler := handlers.NewMessageHandler(messageRepo, userRepo, chatRepo, clientManager, translator)
 	chatHandler := handlers.NewChatHandler(chatRepo, userRepo, clientManager, translator)
-	userHandler := handlers.NewUserHandler(userRepo, clientManager, translator)
+	userHandler := handlers.NewUserHandler(userRepo, clientManager, storageInst, translator)
 	wsHandler := handlers.NewWebSocketHandler(clientManager, tokenRepo, translator, jwtSecret)
 
 	// Setup routes

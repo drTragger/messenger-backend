@@ -38,7 +38,9 @@
     "user": {
       "search": "Users retrieved successfully.",
       "show": "User retrieved successfully.",
-      "get_online_list": "Online users retrieved successfully."
+      "get_online_list": "Online users retrieved successfully.",
+      "update_picture": "Profile picture updated successfully.",
+      "delete_picture": "Profile picture deleted successfully."
     }
   },
   "validation": {
@@ -46,7 +48,9 @@
     "min": "The field must contain at least {{.Param}} characters.",
     "email": "The field must be a valid email address.",
     "unique": "This value already exists.",
-    "phone": "Invalid phone number format. Please include the country code."
+    "phone": "Invalid phone number format. Please include the country code.",
+    "size": "This field must not exceed {{.Param}} MB",
+    "oneof": "This field must be one of: {{.Param}}"
   },
   "notifications": {
     "welcome": "Welcome, {{.Username}}!\nRegistration is complete.\n\nHere is your code: {{.Code}}.\n\nThe code is valid for {{.Expires}} minutes."

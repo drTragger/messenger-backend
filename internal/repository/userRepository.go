@@ -31,7 +31,7 @@ func (ur *UserRepository) CreateUser(user *models.User) error {
 // GetUserByPhone fetches a user by phone
 func (ur *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, password, last_seen, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, password, last_seen, profile_picture, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE phone = $1
 	`
@@ -39,7 +39,7 @@ func (ur *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 	row := ur.DB.QueryRow(query, phone)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.Password, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.Password, &user.LastSeen, &user.ProfilePicture, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -49,7 +49,7 @@ func (ur *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 // GetUserByID fetches a user by ID
 func (ur *UserRepository) GetUserByID(userID uint) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, last_seen, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, last_seen, profile_picture, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE id = $1
 	`
@@ -57,7 +57,7 @@ func (ur *UserRepository) GetUserByID(userID uint) (*models.User, error) {
 	row := ur.DB.QueryRow(query, userID)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.ProfilePicture, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -66,7 +66,7 @@ func (ur *UserRepository) GetUserByID(userID uint) (*models.User, error) {
 
 func (ur *UserRepository) GetUserByUsername(username string) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, last_seen, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, last_seen, profile_picture, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE username = $1
 	`
@@ -74,7 +74,7 @@ func (ur *UserRepository) GetUserByUsername(username string) (*models.User, erro
 	row := ur.DB.QueryRow(query, username)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.ProfilePicture, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -83,7 +83,7 @@ func (ur *UserRepository) GetUserByUsername(username string) (*models.User, erro
 
 func (ur *UserRepository) GetUsersBySearch(search string) ([]*models.User, error) {
 	query := `
-		SELECT id, username, phone, last_seen, created_at, updated_at
+		SELECT id, username, phone, last_seen, profile_picture, created_at, updated_at
 		FROM users
 		WHERE phone ILIKE $1 OR username ILIKE $1
 		LIMIT $2
@@ -101,7 +101,7 @@ func (ur *UserRepository) GetUsersBySearch(search string) ([]*models.User, error
 	for rows.Next() {
 		var user models.User
 
-		err := rows.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt)
+		err := rows.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.ProfilePicture, &user.CreatedAt, &user.UpdatedAt)
 		if err != nil {
 			return nil, err
 		}
@@ -135,5 +135,16 @@ func (ur *UserRepository) UpdateLastSeen(userID uint) error {
 	`
 
 	_, err := ur.DB.Exec(query, userID)
+	return err
+}
+
+func (ur *UserRepository) UpdateProfilePicture(userID uint, picturePath *string) error {
+	query := `
+		UPDATE users
+		SET profile_picture = $1, updated_at = NOW()
+		WHERE id = $2;
+	`
+
+	_, err := ur.DB.Exec(query, picturePath, userID)
 	return err
 }

@@ -9,6 +9,7 @@ type User struct {
 	Password        string     `json:"-"` // Omit password in JSON responses
 	LastSeen        *time.Time `json:"lastSeen"`
 	IsOnline        *bool      `json:"isOnline,omitempty"`
+	ProfilePicture  *string    `json:"profilePicture"`
 	CreatedAt       time.Time  `json:"createdAt"`
 	UpdatedAt       time.Time  `json:"updatedAt"`
 	PhoneVerifiedAt *time.Time `json:"phoneVerifiedAt,omitempty"`
