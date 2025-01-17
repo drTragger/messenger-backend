@@ -117,19 +117,9 @@ func (mr *MessageRepository) GetChatMessages(chatID uint, limit, offset int) ([]
 		var sender, recipient models.User
 
 		err := rows.Scan(
-			&msg.ID,
-			&msg.SenderID,
-			&msg.RecipientID,
-			&msg.Content,
-			&msg.ReadAt,
-			&msg.MessageType,
-			&msg.ChatID,
-			&msg.CreatedAt,
-			&msg.UpdatedAt,
-			&sender.ID,
-			&sender.Username,
-			&recipient.ID,
-			&recipient.Username,
+			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.MessageType, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
+			&sender.ID, &sender.Username,
+			&recipient.ID, &recipient.Username,
 		)
 		if err != nil {
 			return nil, err // Return if there's a scanning error
@@ -187,18 +177,8 @@ func (mr *MessageRepository) GetUserMessages(senderID uint, recipientID uint, li
 		var user models.User // Assuming you want user data for the sender
 
 		err := rows.Scan(
-			&msg.ID,
-			&msg.SenderID,
-			&msg.RecipientID,
-			&msg.Content,
-			&msg.ReadAt,
-			&msg.MessageType,
-			&msg.ChatID,
-			&msg.CreatedAt,
-			&msg.UpdatedAt,
-			&user.ID,
-			&user.Username,
-			&user.Phone,
+			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.MessageType, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
+			&user.ID, &user.Username, &user.Phone,
 		)
 		if err != nil {
 			return nil, err // Return if there's a scanning error

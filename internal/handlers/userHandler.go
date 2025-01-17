@@ -8,6 +8,7 @@ import (
 	"github.com/drTragger/messenger-backend/internal/storage"
 	"github.com/drTragger/messenger-backend/internal/utils"
 	"github.com/drTragger/messenger-backend/internal/websocket"
+	"github.com/gorilla/mux"
 	"log"
 	"net/http"
 )
@@ -88,7 +89,7 @@ func (h *UserHandler) UpdateProfilePicture(w http.ResponseWriter, r *http.Reques
 	// Get the file from the form
 	file, handler, err := r.FormFile("picture")
 	if err != nil {
-		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), "Invalid file")
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
 		return
 	}
 	defer file.Close()
@@ -107,7 +108,7 @@ func (h *UserHandler) UpdateProfilePicture(w http.ResponseWriter, r *http.Reques
 	// Retrieve current user profile
 	user, err := h.UserRepo.GetUserByID(userID)
 	if err != nil {
-		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to retrieve user")
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
 	}
 
@@ -127,7 +128,7 @@ func (h *UserHandler) UpdateProfilePicture(w http.ResponseWriter, r *http.Reques
 	// Use LocalStorage to save the file
 	filePath, err := h.Storage.SaveFile(handler.Filename, file)
 	if err != nil {
-		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to save file")
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
 	}
 
@@ -178,7 +179,7 @@ func (h *UserHandler) DeleteProfilePicture(w http.ResponseWriter, r *http.Reques
 }
 
 func (h *UserHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
-	fileName := r.URL.Query().Get("file")
+	fileName := mux.Vars(r)["filename"]
 	if fileName == "" {
 		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), map[string]string{
 			"file": h.Trans.Translate(r, "validation.required", nil),

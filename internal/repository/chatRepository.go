@@ -58,10 +58,12 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 			u1.username AS user1_username, 
 			u1.phone AS user1_phone, 
 			u1.last_seen AS user1_last_seen, 
+			u1.profile_picture AS user1_profile_picture, 
 			u2.id AS user2_id, 
 			u2.username AS user2_username, 
 			u2.phone AS user2_phone,
 			u2.last_seen AS user2_last_seen,
+			u2.profile_picture AS user2_profile_picture, 
 			m.id AS message_id, 
 			m.sender_id, 
 			m.recipient_id, 
@@ -95,28 +97,10 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 	var lastMessageCreatedAt, lastMessageUpdatedAt sql.NullTime
 
 	err := cr.DB.QueryRow(query, chatID, LastMessageTrim, LastMessageTrim+3).Scan(
-		&chat.ID,
-		&chat.User1ID,
-		&chat.User2ID,
-		&lastMessageID,
-		&chat.CreatedAt,
-		&chat.UpdatedAt,
-		&user1.ID,
-		&user1.Username,
-		&user1.Phone,
-		&user1.LastSeen,
-		&user2.ID,
-		&user2.Username,
-		&user2.Phone,
-		&user2.LastSeen,
-		&lastMessageID,
-		&lastMessageSenderID,
-		&lastMessageRecipientID,
-		&lastMessageContent,
-		&lastMessageType,
-		&lastMessageChatID,
-		&lastMessageCreatedAt,
-		&lastMessageUpdatedAt,
+		&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
+		&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture,
+		&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture,
+		&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageType, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -166,12 +150,14 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
        		u1.username  AS user1_username,
        		u1.phone  AS user1_phone,
        		u1.last_seen  AS user1_last_seen,
+       		u1.profile_picture  AS user1_profile_picture,
        		u1.created_at  AS user1_created_at,
        		u1.updated_at  AS user1_updated_at,
        		u2.id        AS user2_id,
        		u2.username  AS user2_username,
        		u2.phone  AS user2_phone,
        		u2.last_seen  AS user2_last_seen,
+       		u2.profile_picture  AS user2_profile_picture,
        		u2.created_at  AS user2_created_at,
        		u2.updated_at  AS user2_updated_at,
        		m.id         AS message_id,
@@ -223,8 +209,8 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 
 		err := rows.Scan(
 			&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
-			&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.CreatedAt, &user1.UpdatedAt,
-			&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.CreatedAt, &user2.UpdatedAt,
+			&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture, &user1.CreatedAt, &user1.UpdatedAt,
+			&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture, &user2.CreatedAt, &user2.UpdatedAt,
 			&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageReadAt, &lastMessageType, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
 		)
 		if err != nil {

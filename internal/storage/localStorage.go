@@ -38,27 +38,29 @@ func (l *LocalStorage) SaveFile(fileName string, fileData io.Reader) (string, er
 	newFileName := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext) // Unique timestamp-based name
 	filePath := l.buildFilePath(newFileName)
 
+	log.Printf("Saving file to: %s", filePath)
+
 	outFile, err := os.Create(filePath)
 	if err != nil {
 		log.Printf("Failed to create file '%s': %v", filePath, err)
-		return "", err
+		return "", fmt.Errorf("failed to create file: %w", err)
 	}
 	defer outFile.Close()
 
 	_, err = io.Copy(outFile, fileData)
 	if err != nil {
 		log.Printf("Failed to copy data to file '%s': %v", filePath, err)
-		return "", err
+		return "", fmt.Errorf("failed to write file data: %w", err)
 	}
 
 	return newFileName, nil
 }
 
 func (l *LocalStorage) GetFile(fileName string) (string, error) {
-	// Build the absolute path to the file
 	filePath := l.buildFilePath(fileName)
 
-	// Check if the file exists
+	log.Printf("Fetching file from: %s", filePath)
+
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
 		return "", fmt.Errorf("file '%s' does not exist", filePath)
 	}
