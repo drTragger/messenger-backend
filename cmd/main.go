@@ -19,6 +19,11 @@ import (
 func main() {
 	cfg := config.LoadConfig()
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if jwtSecret == "" {
+		log.Fatalf("JWT_SECRET is not set in environment variables.")
+	}
+
 	// Initialize Postgres DB
 	pdb, err := db.InitDB(cfg)
 	if err != nil {
@@ -38,24 +43,24 @@ func main() {
 	// Initialize translator
 	translator := utils.NewTranslator(getBasePath())
 
-	// Initialize repository and handler
+	// Initialize repositories
 	userRepo := repository.NewUserRepository(pdb)
 	tokenRepo := repository.NewTokenRepository(rdb)
 	messageRepo := repository.NewMessageRepository(pdb)
-	jwtSecret := os.Getenv("JWT_SECRET")
-	if jwtSecret == "" {
-		log.Fatalf("JWT_SECRET is not set in environment variables.")
-	}
+	chatRepo := repository.NewChatRepository(pdb)
 
+	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo, tokenRepo, jwtSecret, translator)
-	messageHandler := handlers.NewMessageHandler(messageRepo, userRepo, clientManager, translator)
-	wsHandler := handlers.NewWebSocketHandler(clientManager)
+	messageHandler := handlers.NewMessageHandler(messageRepo, userRepo, chatRepo, clientManager, translator)
+	chatHandler := handlers.NewChatHandler(chatRepo, userRepo, clientManager, translator)
+	userHandler := handlers.NewUserHandler(userRepo, clientManager, translator)
+	wsHandler := handlers.NewWebSocketHandler(clientManager, tokenRepo, translator, jwtSecret)
 
 	// Setup routes
 	r := mux.NewRouter()
 	r.Use(middleware.CORS())
 	r.Use(middleware.LanguageMiddleware(utils.FallbackLang))
-	handlers.RegisterRoutes(r, authHandler, messageHandler, wsHandler)
+	handlers.RegisterRoutes(r, authHandler, messageHandler, chatHandler, userHandler, wsHandler)
 
 	log.Printf("Server running on %s", cfg.ServerPort)
 	if err := http.ListenAndServe(cfg.ServerPort, r); err != nil {

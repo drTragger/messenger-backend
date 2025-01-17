@@ -357,3 +357,20 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.logout", nil), nil)
 }
+
+func (h *AuthHandler) GetCurrentUser(w http.ResponseWriter, r *http.Request) {
+	userID := r.Context().Value("user_id").(uint)
+
+	user, err := h.UserRepo.GetUserByID(userID)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), "Failed to get user")
+		return
+	}
+
+	if user == nil {
+		responses.ErrorResponse(w, http.StatusNotFound, h.Trans.Translate(r, "errors.not_found", nil), "User not found")
+		return
+	}
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.user.show", nil), user)
+}

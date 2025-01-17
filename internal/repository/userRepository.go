@@ -4,7 +4,10 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/drTragger/messenger-backend/internal/models"
-	"time"
+)
+
+const (
+	UserSearchLimit = 10
 )
 
 type UserRepository struct {
@@ -16,27 +19,27 @@ func NewUserRepository(db *sql.DB) *UserRepository {
 }
 
 // CreateUser inserts a new user into the database
-func (repo *UserRepository) CreateUser(user *models.User) error {
+func (ur *UserRepository) CreateUser(user *models.User) error {
 	query := `
 		INSERT INTO users (username, phone, password) 
 		VALUES ($1, $2, $3)
 	`
-	_, err := repo.DB.Exec(query, user.Username, user.Phone, user.Password)
+	_, err := ur.DB.Exec(query, user.Username, user.Phone, user.Password)
 	return err
 }
 
 // GetUserByPhone fetches a user by phone
-func (repo *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
+func (ur *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, password, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, password, last_seen, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE phone = $1
 	`
 
-	row := repo.DB.QueryRow(query, phone)
+	row := ur.DB.QueryRow(query, phone)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.Password, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.Password, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
@@ -44,47 +47,93 @@ func (repo *UserRepository) GetUserByPhone(phone string) (*models.User, error) {
 }
 
 // GetUserByID fetches a user by ID
-func (repo *UserRepository) GetUserByID(userID uint) (*models.User, error) {
+func (ur *UserRepository) GetUserByID(userID uint) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, last_seen, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE id = $1
 	`
 
-	row := repo.DB.QueryRow(query, userID)
+	row := ur.DB.QueryRow(query, userID)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
 	return user, err
 }
 
-func (repo *UserRepository) GetUserByUsername(username string) (*models.User, error) {
+func (ur *UserRepository) GetUserByUsername(username string) (*models.User, error) {
 	query := `
-		SELECT id, username, phone, created_at, updated_at, phone_verified_at 
+		SELECT id, username, phone, last_seen, created_at, updated_at, phone_verified_at 
 		FROM users 
 		WHERE username = $1
 	`
 
-	row := repo.DB.QueryRow(query, username)
+	row := ur.DB.QueryRow(query, username)
 
 	user := &models.User{}
-	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
+	err := row.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt, &user.PhoneVerifiedAt)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, nil // User not found
 	}
 	return user, err
 }
 
-func (repo *UserRepository) VerifyPhone(phone string) error {
+func (ur *UserRepository) GetUsersBySearch(search string) ([]*models.User, error) {
 	query := `
-		UPDATE users
-		SET phone_verified_at = $1
-		WHERE phone = $2;
+		SELECT id, username, phone, last_seen, created_at, updated_at
+		FROM users
+		WHERE phone ILIKE $1 OR username ILIKE $1
+		LIMIT $2
 	`
 
-	_, err := repo.DB.Exec(query, time.Now(), phone)
+	searchTerm := "%" + search + "%"
+
+	rows, err := ur.DB.Query(query, searchTerm, UserSearchLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []*models.User
+	for rows.Next() {
+		var user models.User
+
+		err := rows.Scan(&user.ID, &user.Username, &user.Phone, &user.LastSeen, &user.CreatedAt, &user.UpdatedAt)
+		if err != nil {
+			return nil, err
+		}
+
+		users = append(users, &user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (ur *UserRepository) VerifyPhone(phone string) error {
+	query := `
+		UPDATE users
+		SET phone_verified_at = NOW(), updated_at = NOW()
+		WHERE phone = $1;
+	`
+
+	_, err := ur.DB.Exec(query, phone)
+	return err
+}
+
+func (ur *UserRepository) UpdateLastSeen(userID uint) error {
+	query := `
+		UPDATE users
+		SET last_seen = NOW(), updated_at = NOW()
+		WHERE id = $1;
+	`
+
+	_, err := ur.DB.Exec(query, userID)
 	return err
 }

@@ -9,11 +9,13 @@ type Message struct {
 	Content     string      `json:"content"`
 	ReadAt      *time.Time  `json:"readAt"`
 	MessageType MessageType `json:"messageType"`
+	ChatID      uint        `json:"chatId"`
 	CreatedAt   time.Time   `json:"createdAt"`
 	UpdatedAt   time.Time   `json:"updatedAt"`
 
-	Sender    *User `json:"sender"`
-	Recipient *User `json:"recipient"`
+	Sender    *User `json:"sender,omitempty"`
+	Recipient *User `json:"recipient,omitempty"`
+	Chat      *Chat `json:"chat,omitempty"`
 }
 
 type MessageType string

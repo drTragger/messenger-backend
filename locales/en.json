@@ -6,6 +6,8 @@
     "credentials": "Incorrect phone number or password.",
     "auth": "Authentication error.",
     "unauthorized": "Unauthorized.",
+    "not_found": "No results found.",
+    "forbidden": "This action is forbidden.",
     "token": {
       "signing_method": "Unexpected signing method.",
       "invalid": "Invalid token.",
@@ -24,7 +26,19 @@
     "phone_verification": "Phone successfully verified.",
     "message": {
       "send": "Message sent successfully.",
-      "get_list": "Messages retrieved successfully."
+      "get_list": "Messages retrieved successfully.",
+      "edit": "Message edited successfully.",
+      "delete": "Message deleted successfully."
+    },
+    "chat": {
+      "create": "Chat created successfully.",
+      "get_list": "Chats retrieved successfully.",
+      "show": "Chat received successfully."
+    },
+    "user": {
+      "search": "Users retrieved successfully.",
+      "show": "User retrieved successfully.",
+      "get_online_list": "Online users retrieved successfully."
     }
   },
   "validation": {

@@ -10,7 +10,7 @@ func CORS() func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Set CORS headers
 			w.Header().Set("Access-Control-Allow-Origin", os.Getenv("ALLOWED_ORIGIN"))
-			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
 			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept-Language")
 
 			// Handle preflight (OPTIONS) requests

@@ -7,7 +7,14 @@ type User struct {
 	Username        string     `json:"username"`
 	Phone           string     `json:"phone"`
 	Password        string     `json:"-"` // Omit password in JSON responses
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
-	PhoneVerifiedAt *time.Time `json:"phoneVerifiedAt"`
+	LastSeen        *time.Time `json:"lastSeen"`
+	IsOnline        *bool      `json:"isOnline,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
+	PhoneVerifiedAt *time.Time `json:"phoneVerifiedAt,omitempty"`
+}
+
+type OnlineUser struct {
+	IsOnline bool      `json:"isOnline"`
+	LastSeen time.Time `json:"lastSeen"`
 }
