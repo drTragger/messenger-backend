@@ -31,6 +31,7 @@ func RegisterRoutes(r *mux.Router, authHandler *AuthHandler, messageHandler *Mes
 
 	// User routes
 	authApiRouter.HandleFunc("/users", userHandler.GetUsers).Methods("GET", "OPTIONS")
+	authApiRouter.HandleFunc("/users/profile-picture", userHandler.GetProfilePicture).Methods("GET", "OPTIONS")
 	authApiRouter.HandleFunc("/users/profile-picture", userHandler.UpdateProfilePicture).Methods("PATCH", "OPTIONS")
 	authApiRouter.HandleFunc("/users/profile-picture", userHandler.DeleteProfilePicture).Methods("DELETE", "OPTIONS")
 

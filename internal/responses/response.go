@@ -32,6 +32,10 @@ func SuccessResponse(w http.ResponseWriter, statusCode int, message string, data
 	JSONResponse(w, statusCode, response)
 }
 
+func ServeFileResponse(w http.ResponseWriter, r *http.Request, filePath string) {
+	http.ServeFile(w, r, filePath)
+}
+
 // ErrorResponse sends an error JSON response
 func ErrorResponse(w http.ResponseWriter, statusCode int, message string, err string) {
 	log.Println(err)

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"github.com/drTragger/messenger-backend/internal/repository"
 	"github.com/drTragger/messenger-backend/internal/requests"
 	"github.com/drTragger/messenger-backend/internal/responses"
@@ -174,4 +175,23 @@ func (h *UserHandler) DeleteProfilePicture(w http.ResponseWriter, r *http.Reques
 	}
 
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.user.delete_picture", nil), nil)
+}
+
+func (h *UserHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) {
+	fileName := r.URL.Query().Get("file")
+	if fileName == "" {
+		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), map[string]string{
+			"file": h.Trans.Translate(r, "validation.required", nil),
+		})
+		return
+	}
+
+	// Get the file from storage
+	filePath, err := h.Storage.GetFile(fileName)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusNotFound, h.Trans.Translate(r, "errors.not_found", nil), fmt.Sprintf("File not found: %v", err))
+		return
+	}
+
+	responses.ServeFileResponse(w, r, filePath)
 }

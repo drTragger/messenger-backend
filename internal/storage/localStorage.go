@@ -54,16 +54,16 @@ func (l *LocalStorage) SaveFile(fileName string, fileData io.Reader) (string, er
 	return newFileName, nil
 }
 
-func (l *LocalStorage) GetFile(fileName string) (io.ReadCloser, error) {
+func (l *LocalStorage) GetFile(fileName string) (string, error) {
 	// Build the absolute path to the file
 	filePath := l.buildFilePath(fileName)
 
-	// Attempt to open the file
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file '%s': %w", filePath, err)
+	// Check if the file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return "", fmt.Errorf("file '%s' does not exist", filePath)
 	}
-	return file, nil
+
+	return filePath, nil
 }
 
 func (l *LocalStorage) DeleteFile(fileName string) error {

@@ -7,7 +7,7 @@ import (
 
 type Storage interface {
 	SaveFile(fileName string, fileData io.Reader) (string, error)
-	GetFile(fileName string) (io.ReadCloser, error)
+	GetFile(fileName string) (string, error)
 	DeleteFile(fileName string) error
 }
 
