@@ -6,6 +6,8 @@
     "credentials": "Nieprawidłowy numer telefonu lub hasło.",
     "auth": "Błąd uwierzytelniania.",
     "unauthorized": "Brak autoryzacji.",
+    "not_found": "Nie znaleziono wyników.",
+    "forbidden": "Ta akcja jest zabroniona.",
     "token": {
       "signing_method": "Nieoczekiwana metoda podpisu.",
       "invalid": "Nieprawidłowy token.",
@@ -14,6 +16,9 @@
     "code": {
       "invalid": "Nieprawidłowy kod weryfikacyjny.",
       "unverified": "Twój numer telefonu nie został zweryfikowany."
+    },
+    "message": {
+      "sender_read": "Nadawca nie może odczytać swojej własnej wiadomości."
     }
   },
   "success": {
@@ -23,8 +28,23 @@
     "logout": "Wylogowano pomyślnie.",
     "phone_verification": "Numer telefonu został pomyślnie zweryfikowany.",
     "message": {
-      "send": "Wiadomość została wysłana.",
-      "get_list": "Wiadomości zostały pobrane."
+      "send": "Wiadomość została pomyślnie wysłana.",
+      "get_list": "Wiadomości zostały pobrane pomyślnie.",
+      "edit": "Wiadomość została pomyślnie edytowana.",
+      "delete": "Wiadomość została pomyślnie usunięta.",
+      "read": "Data odczytu wiadomości została pomyślnie zaktualizowana."
+    },
+    "chat": {
+      "create": "Czat został pomyślnie utworzony.",
+      "get_list": "Czaty zostały pomyślnie pobrane.",
+      "show": "Czat został pomyślnie pobrany."
+    },
+    "user": {
+      "search": "Użytkownicy zostali pomyślnie pobrani.",
+      "show": "Użytkownik został pomyślnie pobrany.",
+      "get_online_list": "Lista użytkowników online została pomyślnie pobrana.",
+      "update_picture": "Zdjęcie profilowe zostało pomyślnie zaktualizowane.",
+      "delete_picture": "Zdjęcie profilowe zostało pomyślnie usunięte."
     }
   },
   "validation": {
@@ -32,7 +52,9 @@
     "min": "Pole musi zawierać co najmniej {{.Param}} znaków.",
     "email": "Pole musi zawierać prawidłowy adres e-mail.",
     "unique": "Ta wartość już istnieje.",
-    "phone": "Nieprawidłowy format numeru telefonu. Podaj kod kraju."
+    "phone": "Nieprawidłowy format numeru telefonu. Podaj kod kraju.",
+    "size": "Pole nie może przekraczać {{.Param}} MB.",
+    "oneof": "To pole musi zawierać jedną z wartości: {{.Param}}"
   },
   "notifications": {
     "welcome": "Witamy, {{.Username}}!\nRejestracja zakończona.\n\nOto Twój kod: {{.Code}}.\n\nKod jest ważny przez {{.Expires}} minut."
