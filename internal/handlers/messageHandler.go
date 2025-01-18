@@ -95,7 +95,6 @@ func (h *MessageHandler) SendMessage(w http.ResponseWriter, r *http.Request) {
 		SenderID:    r.Context().Value("user_id").(uint),
 		RecipientID: payload.RecipientID,
 		Content:     payload.Message,
-		MessageType: models.TextMessage,
 		ChatID:      chat.ID,
 	}
 

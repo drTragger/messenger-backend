@@ -24,12 +24,12 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 
 func (mr *MessageRepository) Create(msg *models.Message) (*models.Message, error) {
 	query := `
-		INSERT INTO messages (sender_id, recipient_id, content, message_type, chat_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+		INSERT INTO messages (sender_id, recipient_id, content, chat_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := mr.DB.QueryRow(query, msg.SenderID, msg.RecipientID, msg.Content, msg.MessageType, msg.ChatID).
+	err := mr.DB.QueryRow(query, msg.SenderID, msg.RecipientID, msg.Content, msg.ChatID).
 		Scan(&msg.ID, &msg.CreatedAt, &msg.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -43,7 +43,7 @@ func (mr *MessageRepository) Edit(id uint, content string) (*models.Message, err
 		UPDATE messages
 		SET content = $1, updated_at = NOW()
 		WHERE id = $2
-		RETURNING id, sender_id, recipient_id, content, read_at, message_type, chat_id, created_at, updated_at
+		RETURNING id, sender_id, recipient_id, content, read_at, chat_id, created_at, updated_at
 	`
 
 	var m models.Message
@@ -54,7 +54,6 @@ func (mr *MessageRepository) Edit(id uint, content string) (*models.Message, err
 		&m.RecipientID,
 		&m.Content,
 		&m.ReadAt,
-		&m.MessageType,
 		&m.ChatID,
 		&m.CreatedAt,
 		&m.UpdatedAt,
@@ -85,7 +84,6 @@ func (mr *MessageRepository) GetChatMessages(chatID uint, limit, offset int) ([]
 			m.recipient_id, 
 			m.content, 
 			m.read_at, 
-			m.message_type, 
 			m.chat_id, 
 			m.created_at, 
 			m.updated_at,
@@ -118,7 +116,7 @@ func (mr *MessageRepository) GetChatMessages(chatID uint, limit, offset int) ([]
 		var sender, recipient models.User
 
 		err := rows.Scan(
-			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.MessageType, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
+			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
 			&sender.ID, &sender.Username,
 			&recipient.ID, &recipient.Username,
 		)
@@ -148,7 +146,6 @@ func (mr *MessageRepository) GetUserMessages(senderID uint, recipientID uint, li
 			m.recipient_id, 
 			m.content, 
 			m.read_at, 
-			m.message_type, 
 			m.chat_id, 
 			m.created_at, 
 			m.updated_at,
@@ -178,7 +175,7 @@ func (mr *MessageRepository) GetUserMessages(senderID uint, recipientID uint, li
 		var user models.User // Assuming you want user data for the sender
 
 		err := rows.Scan(
-			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.MessageType, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
+			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
 			&user.ID, &user.Username, &user.Phone,
 		)
 		if err != nil {
@@ -200,7 +197,7 @@ func (mr *MessageRepository) GetUserMessages(senderID uint, recipientID uint, li
 
 func (mr *MessageRepository) GetLastMessageForChat(chatID uint) (*models.Message, error) {
 	query := `
-		SELECT id, sender_id, recipient_id, content, read_at, message_type, chat_id, created_at, updated_at
+		SELECT id, sender_id, recipient_id, content, read_at, chat_id, created_at, updated_at
 		FROM messages
 		WHERE chat_id = $1
 		ORDER BY created_at DESC
@@ -215,7 +212,6 @@ func (mr *MessageRepository) GetLastMessageForChat(chatID uint) (*models.Message
 		&message.RecipientID,
 		&message.Content,
 		&message.ReadAt,
-		&message.MessageType,
 		&message.ChatID,
 		&message.CreatedAt,
 		&message.UpdatedAt,
@@ -233,14 +229,14 @@ func (mr *MessageRepository) GetLastMessageForChat(chatID uint) (*models.Message
 
 func (mr *MessageRepository) GetById(id uint) (*models.Message, error) {
 	query := `
-		SELECT id, sender_id, recipient_id, content, read_at, message_type, chat_id, created_at, updated_at
+		SELECT id, sender_id, recipient_id, content, read_at, chat_id, created_at, updated_at
 		FROM messages
 		WHERE id = $1
 	`
 
 	var m models.Message
 
-	err := mr.DB.QueryRow(query, id).Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ReadAt, &m.MessageType, &m.ChatID, &m.CreatedAt, &m.UpdatedAt)
+	err := mr.DB.QueryRow(query, id).Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ReadAt, &m.ChatID, &m.CreatedAt, &m.UpdatedAt)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

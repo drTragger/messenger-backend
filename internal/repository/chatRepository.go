@@ -74,7 +74,6 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
     			END,
     			$3
 			) AS message_content_trimmed, 
-			m.message_type, 
 			m.chat_id, 
 			m.created_at AS message_created_at, 
 			m.updated_at AS message_updated_at
@@ -93,14 +92,13 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 	var lastMessageID sql.NullInt64
 	var lastMessageContent sql.NullString
 	var lastMessageSenderID, lastMessageRecipientID, lastMessageChatID sql.NullInt64
-	var lastMessageType sql.NullString
 	var lastMessageCreatedAt, lastMessageUpdatedAt sql.NullTime
 
 	err := cr.DB.QueryRow(query, chatID, LastMessageTrim, LastMessageTrim+3).Scan(
 		&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
 		&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture,
 		&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture,
-		&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageType, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
+		&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
 	)
 
 	if errors.Is(err, sql.ErrNoRows) {
@@ -121,7 +119,6 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 		lastMessage.SenderID = uint(lastMessageSenderID.Int64)
 		lastMessage.RecipientID = uint(lastMessageRecipientID.Int64)
 		lastMessage.Content = lastMessageContent.String
-		lastMessage.MessageType = models.MessageType(lastMessageType.String)
 		lastMessage.ChatID = uint(lastMessageChatID.Int64)
 		if lastMessageCreatedAt.Valid {
 			lastMessage.CreatedAt = lastMessageCreatedAt.Time
@@ -171,7 +168,6 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
     			$5
 			) AS message_content_trimmed,
 		    m.read_at AS last_message_read_at,
-		    m.message_type AS last_message_type,
 		    m.chat_id AS last_message_chat_id,
        		m.created_at AS last_message_created_at,
        		m.updated_at AS last_message_updated_at
@@ -202,7 +198,6 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 		var lastMessageRecipientID sql.NullInt64
 		var lastMessageContent sql.NullString
 		var lastMessageReadAt sql.NullTime
-		var lastMessageType sql.NullString
 		var lastMessageChatID sql.NullInt64
 		var lastMessageCreatedAt sql.NullTime
 		var lastMessageUpdatedAt sql.NullTime
@@ -211,7 +206,7 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 			&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
 			&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture, &user1.CreatedAt, &user1.UpdatedAt,
 			&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture, &user2.CreatedAt, &user2.UpdatedAt,
-			&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageReadAt, &lastMessageType, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
+			&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageReadAt, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -234,9 +229,6 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 			}
 			if lastMessageReadAt.Valid {
 				lastMessage.ReadAt = &lastMessageReadAt.Time
-			}
-			if lastMessageType.Valid {
-				lastMessage.MessageType = models.MessageType(lastMessageType.String)
 			}
 			if lastMessageChatID.Valid {
 				lastMessage.ChatID = uint(lastMessageChatID.Int64)
