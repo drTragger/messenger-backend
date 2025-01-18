@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/drTragger/messenger-backend/internal/models"
+	"time"
 )
 
 const (
@@ -249,4 +250,16 @@ func (mr *MessageRepository) GetById(id uint) (*models.Message, error) {
 	}
 
 	return &m, nil
+}
+
+func (mr *MessageRepository) MarkAsRead(id uint) (*time.Time, error) {
+	query := `
+		UPDATE messages SET read_at = NOW() WHERE id = $1
+		RETURNING read_at
+	`
+
+	var readAt time.Time
+
+	err := mr.DB.QueryRow(query, id).Scan(&readAt)
+	return &readAt, err
 }

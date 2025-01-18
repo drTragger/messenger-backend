@@ -6,6 +6,7 @@ const (
 	NewMessageEvent    = "newMessage"
 	EditMessageEvent   = "editMessage"
 	DeleteMessageEvent = "deleteMessage"
+	ReadMessageEvent   = "readMessage"
 	StatusChangeEvent  = "statusChange"
 )
 

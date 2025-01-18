@@ -18,16 +18,17 @@ func RegisterRoutes(r *mux.Router, authHandler *AuthHandler, messageHandler *Mes
 	apiRouter.HandleFunc("/phone/verify", authHandler.VerifyCode).Methods("POST", "OPTIONS")
 	authApiRouter.HandleFunc("/auth/me", authHandler.GetCurrentUser).Methods("GET", "OPTIONS")
 
-	// Message routes
-	authApiRouter.HandleFunc("/messages", messageHandler.SendMessage).Methods("POST", "OPTIONS")
-	authApiRouter.HandleFunc("/messages", messageHandler.GetMessages).Methods("GET", "OPTIONS")
-	authApiRouter.HandleFunc("/messages/{id}", messageHandler.EditMessage).Methods("PATCH", "OPTIONS")
-	authApiRouter.HandleFunc("/messages/{id}", messageHandler.DeleteMessage).Methods("DELETE", "OPTIONS")
-
 	// Chat routes
 	authApiRouter.HandleFunc("/chats", chatHandler.Create).Methods("POST", "OPTIONS")
 	authApiRouter.HandleFunc("/chats", chatHandler.GetForUser).Methods("GET", "OPTIONS")
 	authApiRouter.HandleFunc("/chats/{id}", chatHandler.GetByID).Methods("GET", "OPTIONS")
+
+	// Message routes
+	authApiRouter.HandleFunc("/chats/{chatId}/messages", messageHandler.SendMessage).Methods("POST", "OPTIONS")
+	authApiRouter.HandleFunc("/chats/{chatId}/messages", messageHandler.GetMessages).Methods("GET", "OPTIONS")
+	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}", messageHandler.EditMessage).Methods("PATCH", "OPTIONS")
+	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}", messageHandler.DeleteMessage).Methods("DELETE", "OPTIONS")
+	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}/read", messageHandler.MarkMessageRead).Methods("PATCH", "OPTIONS")
 
 	// User routes
 	authApiRouter.HandleFunc("/users", userHandler.GetUsers).Methods("GET", "OPTIONS")

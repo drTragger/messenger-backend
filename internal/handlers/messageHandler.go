@@ -133,7 +133,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	messageIDStr := mux.Vars(r)["id"]
+	messageIDStr := mux.Vars(r)["messageId"]
 	messageID, err := strconv.Atoi(messageIDStr)
 	if err != nil {
 		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
@@ -164,7 +164,7 @@ func (h *MessageHandler) EditMessage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *MessageHandler) DeleteMessage(w http.ResponseWriter, r *http.Request) {
-	messageIDStr := mux.Vars(r)["id"]
+	messageIDStr := mux.Vars(r)["messageId"]
 	messageID, err := strconv.Atoi(messageIDStr)
 	if err != nil {
 		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
@@ -213,7 +213,7 @@ func (h *MessageHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query()
 
 	// Extract and validate sender ID
-	chatIDStr := query.Get("chatId")
+	chatIDStr := mux.Vars(r)["chatId"]
 	if chatIDStr == "" {
 		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), map[string]string{
 			"chatId": h.Trans.Translate(r, "validation.required", nil),
@@ -262,4 +262,43 @@ func (h *MessageHandler) GetMessages(w http.ResponseWriter, r *http.Request) {
 
 	// Respond with the list of messages
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.message.get_list", nil), messages)
+}
+
+func (h *MessageHandler) MarkMessageRead(w http.ResponseWriter, r *http.Request) {
+	messageIDStr := mux.Vars(r)["messageId"]
+	messageID, err := strconv.Atoi(messageIDStr)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
+		return
+	}
+
+	currentUserID := r.Context().Value("user_id").(uint)
+
+	message, err := h.MsgRepo.GetById(uint(messageID))
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	if message == nil {
+		responses.ErrorResponse(w, http.StatusNotFound, h.Trans.Translate(r, "errors.not_found", nil), "Message not found")
+		return
+	}
+
+	if message.SenderID == currentUserID {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.message.sender_read", nil), "Sender is not allowed")
+		return
+	}
+
+	readAt, err := h.MsgRepo.MarkAsRead(uint(messageID))
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+	message.ReadAt = readAt
+
+	notification := websocket.NewNotification(websocket.ReadMessageEvent, message)
+	go h.ClientManager.SendMessage(message.SenderID, notification)
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.message.read", nil), nil)
 }

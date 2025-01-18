@@ -60,9 +60,15 @@ func (cm *ClientManager) SendMessage(userID uint, message *Notification) {
 		log.Printf("User %d is not connected", userID)
 		return
 	}
-	if err := conn.WriteJSON(message); err != nil {
-		log.Printf("Error sending message to user %d: %s", userID, err)
-	}
+	go func(userID uint, conn *websocket.Conn) {
+		if err := conn.WriteJSON(message); err != nil {
+			log.Printf("Error sending message to user %d: %s", userID, err)
+			conn.Close()
+			cm.mu.Lock()
+			delete(cm.Clients, userID)
+			cm.mu.Unlock()
+		}
+	}(userID, conn)
 }
 
 func (cm *ClientManager) broadcastStatusChange(change *StatusChange) {

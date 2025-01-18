@@ -16,6 +16,9 @@
     "code": {
       "invalid": "Invalid verification code.",
       "unverified": "Your phone number is not verified."
+    },
+    "message": {
+      "sender_read": "Sender can't read his own message."
     }
   },
   "success": {
@@ -28,7 +31,8 @@
       "send": "Message sent successfully.",
       "get_list": "Messages retrieved successfully.",
       "edit": "Message edited successfully.",
-      "delete": "Message deleted successfully."
+      "delete": "Message deleted successfully.",
+      "read": "Message read at updated successfully."
     },
     "chat": {
       "create": "Chat created successfully.",
