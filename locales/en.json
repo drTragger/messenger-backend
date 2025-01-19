@@ -15,7 +15,8 @@
     },
     "code": {
       "invalid": "Invalid verification code.",
-      "unverified": "Your phone number is not verified."
+      "unverified": "Your phone number is not verified.",
+      "threshold": "Your code is already sent."
     },
     "message": {
       "sender_read": "Sender can't read his own message."
@@ -27,6 +28,7 @@
     "refresh_token": "Token successfully refreshed.",
     "logout": "Logout successful.",
     "phone_verification": "Phone successfully verified.",
+    "resend_code": "Code resent successfully",
     "message": {
       "send": "Message sent successfully.",
       "get_list": "Messages retrieved successfully.",

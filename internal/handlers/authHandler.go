@@ -22,6 +22,7 @@ const (
 	TokenExpire            = 24 * time.Hour
 	VerificationCodeLength = 6
 	VerificationCodeExpire = 5 * time.Minute
+	ResendCodeThreshold    = 30 * time.Second
 )
 
 type AuthHandler struct {
@@ -134,7 +135,13 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	responses.SuccessResponse(w, http.StatusCreated, h.Trans.Translate(r, "success.register", nil), nil)
+	err = h.TokenRepo.StoreResendCodeAttempt(r.Context(), payload.Phone, ResendCodeThreshold)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	responses.SuccessResponse(w, http.StatusCreated, h.Trans.Translate(r, "success.register", nil), user)
 }
 
 // VerifyCode verifies phone number verification code
@@ -187,6 +194,87 @@ func (h *AuthHandler) VerifyCode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.phone_verification", nil), nil)
+}
+
+// ResendCode resends the phone verification code
+func (h *AuthHandler) ResendCode(w http.ResponseWriter, r *http.Request) {
+	var payload requests.ResendCodeRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
+		return
+	}
+
+	if err := utils.ValidateStruct(&payload); err != nil {
+		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), utils.FormatValidationError(r, err, h.Trans))
+		return
+	}
+
+	user, err := h.UserRepo.GetUserByPhone(payload.Phone)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+	if user == nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), "User does not exist.")
+		return
+	}
+
+	if attempt, _ := h.TokenRepo.GetResendCodeAttempt(r.Context(), payload.Phone); attempt != "" {
+		responses.ErrorResponse(w, http.StatusTooManyRequests, h.Trans.Translate(r, "errors.code.threshold", nil), "The code is already resend.")
+		return
+	}
+
+	err = h.TokenRepo.DeleteVerificationCode(r.Context(), payload.Phone)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	err = h.TokenRepo.DeleteVerificationCode(r.Context(), payload.Phone)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	// Generate verification code
+	verificationCode := utils.GenerateRandomCode(VerificationCodeLength)
+
+	// Create a channel to capture errors
+	errChan := make(chan error, 2)
+
+	// Use a goroutine to store the verification code in Redis
+	go func() {
+		errChan <- h.TokenRepo.StoreVerificationCode(r.Context(), payload.Phone, verificationCode, VerificationCodeExpire)
+	}()
+
+	// Use another goroutine to send the SMS
+	go func() {
+		smsClient := utils.NewSMSClient()
+		errChan <- smsClient.SendSMS(
+			payload.Phone,
+			h.Trans.Translate(r, "notifications.welcome", map[string]interface{}{
+				"Username": payload.Username,
+				"Code":     verificationCode,
+				"Expires":  VerificationCodeExpire.Minutes(),
+			}),
+		)
+	}()
+
+	// Wait for both operations to complete
+	for i := 0; i < 2; i++ {
+		if err := <-errChan; err != nil {
+			responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+			return
+		}
+	}
+
+	err = h.TokenRepo.StoreResendCodeAttempt(r.Context(), payload.Phone, ResendCodeThreshold)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.resend_code", nil), nil)
 }
 
 // Login handles user login

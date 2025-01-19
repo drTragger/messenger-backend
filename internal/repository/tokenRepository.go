@@ -63,3 +63,29 @@ func (tr *TokenRepository) DeleteVerificationCode(ctx context.Context, phone str
 	_, err := tr.Client.Del(ctx, key).Result()
 	return err
 }
+
+// StoreResendCodeAttempt stores the phone of a user who resends the phone verification code
+func (tr *TokenRepository) StoreResendCodeAttempt(ctx context.Context, phone string, expiry time.Duration) error {
+	key := fmt.Sprintf("resendPhone:%s", phone)
+	return tr.Client.Set(ctx, key, phone, expiry).Err()
+}
+
+// GetResendCodeAttempt retrieves the phone of a user who resends the phone verification code
+func (tr *TokenRepository) GetResendCodeAttempt(ctx context.Context, phone string) (string, error) {
+	key := fmt.Sprintf("resendPhone:%s", phone)
+	code, err := tr.Client.Get(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return code, nil
+}
+
+// DeleteResendCodeAttempt deletes the phone of a user who resends the phone verification code
+func (tr *TokenRepository) DeleteResendCodeAttempt(ctx context.Context, phone string) error {
+	key := fmt.Sprintf("resendPhone:%s", phone)
+	_, err := tr.Client.Del(ctx, key).Result()
+	return err
+}

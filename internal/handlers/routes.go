@@ -16,6 +16,7 @@ func RegisterRoutes(r *mux.Router, authHandler *AuthHandler, messageHandler *Mes
 	apiRouter.HandleFunc("/refresh-token", authHandler.RefreshToken).Methods("POST", "OPTIONS")
 	authApiRouter.HandleFunc("/logout", authHandler.Logout).Methods("POST", "OPTIONS")
 	apiRouter.HandleFunc("/phone/verify", authHandler.VerifyCode).Methods("POST", "OPTIONS")
+	apiRouter.HandleFunc("/phone/verify/resend", authHandler.ResendCode).Methods("POST", "OPTIONS")
 	authApiRouter.HandleFunc("/auth/me", authHandler.GetCurrentUser).Methods("GET", "OPTIONS")
 
 	// Chat routes
