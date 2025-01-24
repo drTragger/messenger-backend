@@ -74,7 +74,7 @@ func (h *ChatHandler) Create(w http.ResponseWriter, r *http.Request) {
 	chat.User1 = user1
 	chat.User2 = user2
 
-	responses.SuccessResponse(w, http.StatusCreated, h.Trans.Translate(r, "success.chat.create", nil), chat)
+	responses.SuccessResponse(w, http.StatusCreated, h.Trans.Translate(r, "success.chats.create", nil), chat)
 }
 
 func (h *ChatHandler) GetForUser(w http.ResponseWriter, r *http.Request) {
@@ -135,7 +135,7 @@ func (h *ChatHandler) GetForUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.chat.get_list", nil), chats)
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.chats.get_list", nil), chats)
 }
 
 func (h *ChatHandler) GetByID(w http.ResponseWriter, r *http.Request) {
@@ -164,5 +164,5 @@ func (h *ChatHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.chat.show", nil), chat)
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.chats.show", nil), chat)
 }

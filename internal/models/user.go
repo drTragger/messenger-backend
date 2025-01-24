@@ -5,6 +5,8 @@ import "time"
 type User struct {
 	ID              uint       `json:"id"`
 	Username        string     `json:"username"`
+	FirstName       *string    `json:"firstName"`
+	LastName        *string    `json:"lastName"`
 	Phone           string     `json:"phone"`
 	Password        string     `json:"-"` // Omit password in JSON responses
 	LastSeen        *time.Time `json:"lastSeen"`

@@ -3,6 +3,8 @@ package repository
 import (
 	"database/sql"
 	"errors"
+	"fmt"
+	"github.com/drTragger/messenger-backend/db"
 	"github.com/drTragger/messenger-backend/internal/models"
 )
 
@@ -56,11 +58,15 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 			c.updated_at,
 			u1.id AS user1_id, 
 			u1.username AS user1_username, 
+			u1.first_name AS user1_first_name, 
+			u1.last_name AS user1_last_name, 
 			u1.phone AS user1_phone, 
 			u1.last_seen AS user1_last_seen, 
 			u1.profile_picture AS user1_profile_picture, 
 			u2.id AS user2_id, 
 			u2.username AS user2_username, 
+			u2.first_name AS user2_first_name, 
+			u2.last_name AS user2_last_name, 
 			u2.phone AS user2_phone,
 			u2.last_seen AS user2_last_seen,
 			u2.profile_picture AS user2_profile_picture, 
@@ -96,8 +102,8 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 
 	err := cr.DB.QueryRow(query, chatID, LastMessageTrim, LastMessageTrim+3).Scan(
 		&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
-		&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture,
-		&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture,
+		&user1.ID, &user1.Username, &user1.FirstName, &user1.LastName, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture,
+		&user2.ID, &user2.Username, &user2.FirstName, &user2.LastName, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture,
 		&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
 	)
 
@@ -109,7 +115,7 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 		return nil, err
 	}
 
-	// Assign fetched users to the chat struct
+	// Assign fetched users to the chats struct
 	chat.User1 = &user1
 	chat.User2 = &user2
 
@@ -118,7 +124,7 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 		lastMessage.ID = uint(lastMessageID.Int64)
 		lastMessage.SenderID = uint(lastMessageSenderID.Int64)
 		lastMessage.RecipientID = uint(lastMessageRecipientID.Int64)
-		lastMessage.Content = lastMessageContent.String
+		lastMessage.Content = &lastMessageContent.String
 		lastMessage.ChatID = uint(lastMessageChatID.Int64)
 		if lastMessageCreatedAt.Valid {
 			lastMessage.CreatedAt = lastMessageCreatedAt.Time
@@ -135,50 +141,10 @@ func (cr *ChatRepository) GetByID(chatID uint) (*models.Chat, error) {
 }
 
 func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.Chat, error) {
-	query := `
-		SELECT 
-		    c.id,
-       		c.user1_id,
-       		c.user2_id,
-       		c.last_message_id,
-       		c.created_at,
-       		c.updated_at,
-       		u1.id        AS user1_id,
-       		u1.username  AS user1_username,
-       		u1.phone  AS user1_phone,
-       		u1.last_seen  AS user1_last_seen,
-       		u1.profile_picture  AS user1_profile_picture,
-       		u1.created_at  AS user1_created_at,
-       		u1.updated_at  AS user1_updated_at,
-       		u2.id        AS user2_id,
-       		u2.username  AS user2_username,
-       		u2.phone  AS user2_phone,
-       		u2.last_seen  AS user2_last_seen,
-       		u2.profile_picture  AS user2_profile_picture,
-       		u2.created_at  AS user2_created_at,
-       		u2.updated_at  AS user2_updated_at,
-       		m.id         AS message_id,
-       		m.sender_id         AS last_message_sender_id,
-       		m.recipient_id         AS last_message_recipient_id,
-       		LEFT(
-    			CASE
-        			WHEN LENGTH(m.content) > $4 THEN CONCAT(SUBSTRING(m.content, 1, $4), '...')
-        			ELSE m.content
-    			END,
-    			$5
-			) AS message_content_trimmed,
-		    m.read_at AS last_message_read_at,
-		    m.chat_id AS last_message_chat_id,
-       		m.created_at AS last_message_created_at,
-       		m.updated_at AS last_message_updated_at
-		FROM chats c
-         	LEFT JOIN users u1 ON c.user1_id = u1.id
-         	LEFT JOIN users u2 ON c.user2_id = u2.id
-         	LEFT JOIN messages m ON c.last_message_id = m.id
-		WHERE c.user1_id = $1 OR c.user2_id = $1
-		ORDER BY c.updated_at DESC
-		LIMIT $2 OFFSET $3
-	`
+	query, err := db.LoadQuery("get_for_user.sql", "chats")
+	if err != nil {
+		return nil, fmt.Errorf("failed to load query: %w", err)
+	}
 
 	rows, err := cr.DB.Query(query, userID, limit, offset, LastMessageTrim, LastMessageTrim+3)
 	if err != nil {
@@ -191,8 +157,9 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 		var chat models.Chat
 		var user1, user2 models.User
 		var lastMessage models.Message
+		var lastAttachment models.Attachment
 
-		// Handle nullable fields
+		// Handle nullable fields for the last message
 		var lastMessageID sql.NullInt64
 		var lastMessageSenderID sql.NullInt64
 		var lastMessageRecipientID sql.NullInt64
@@ -202,11 +169,21 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 		var lastMessageCreatedAt sql.NullTime
 		var lastMessageUpdatedAt sql.NullTime
 
+		// Handle nullable fields for the last attachment
+		var lastAttachmentID sql.NullInt64
+		var lastAttachmentFileName sql.NullString
+		var lastAttachmentFilePath sql.NullString
+		var lastAttachmentFileType sql.NullString
+		var lastAttachmentFileSize sql.NullInt64
+		var lastAttachmentCreatedAt sql.NullTime
+		var lastAttachmentUpdatedAt sql.NullTime
+
 		err := rows.Scan(
 			&chat.ID, &chat.User1ID, &chat.User2ID, &chat.LastMessageID, &chat.CreatedAt, &chat.UpdatedAt,
-			&user1.ID, &user1.Username, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture, &user1.CreatedAt, &user1.UpdatedAt,
-			&user2.ID, &user2.Username, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture, &user2.CreatedAt, &user2.UpdatedAt,
+			&user1.ID, &user1.Username, &user1.FirstName, &user1.LastName, &user1.Phone, &user1.LastSeen, &user1.ProfilePicture, &user1.CreatedAt, &user1.UpdatedAt,
+			&user2.ID, &user2.Username, &user2.FirstName, &user2.LastName, &user2.Phone, &user2.LastSeen, &user2.ProfilePicture, &user2.CreatedAt, &user2.UpdatedAt,
 			&lastMessageID, &lastMessageSenderID, &lastMessageRecipientID, &lastMessageContent, &lastMessageReadAt, &lastMessageChatID, &lastMessageCreatedAt, &lastMessageUpdatedAt,
+			&lastAttachmentID, &lastAttachmentFileName, &lastAttachmentFilePath, &lastAttachmentFileType, &lastAttachmentFileSize, &lastAttachmentCreatedAt, &lastAttachmentUpdatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -225,7 +202,7 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 				lastMessage.RecipientID = uint(lastMessageRecipientID.Int64)
 			}
 			if lastMessageContent.Valid {
-				lastMessage.Content = lastMessageContent.String
+				lastMessage.Content = &lastMessageContent.String
 			}
 			if lastMessageReadAt.Valid {
 				lastMessage.ReadAt = &lastMessageReadAt.Time
@@ -239,6 +216,31 @@ func (cr *ChatRepository) GetForUser(userID uint, limit, offset int) ([]*models.
 			if lastMessageUpdatedAt.Valid {
 				lastMessage.UpdatedAt = lastMessageUpdatedAt.Time
 			}
+
+			// Handle nullable last attachment
+			if lastAttachmentID.Valid {
+				lastAttachment.ID = uint(lastAttachmentID.Int64)
+				if lastAttachmentFileName.Valid {
+					lastAttachment.FileName = lastAttachmentFileName.String
+				}
+				if lastAttachmentFilePath.Valid {
+					lastAttachment.FilePath = lastAttachmentFilePath.String
+				}
+				if lastAttachmentFileType.Valid {
+					lastAttachment.FileType = lastAttachmentFileType.String
+				}
+				if lastAttachmentFileSize.Valid {
+					lastAttachment.FileSize = lastAttachmentFileSize.Int64
+				}
+				if lastAttachmentCreatedAt.Valid {
+					lastAttachment.CreatedAt = lastAttachmentCreatedAt.Time
+				}
+				if lastAttachmentUpdatedAt.Valid {
+					lastAttachment.UpdatedAt = lastAttachmentUpdatedAt.Time
+				}
+				lastMessage.Attachments = []*models.Attachment{&lastAttachment}
+			}
+
 			chat.LastMessage = &lastMessage
 		} else {
 			chat.LastMessage = nil

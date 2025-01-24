@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/drTragger/messenger-backend/internal/services"
 	"github.com/drTragger/messenger-backend/internal/storage"
 	"log"
 	"net/http"
@@ -57,12 +58,17 @@ func main() {
 	// Initialize repositories
 	userRepo := repository.NewUserRepository(pdb)
 	tokenRepo := repository.NewTokenRepository(rdb)
-	messageRepo := repository.NewMessageRepository(pdb)
+	msgRepo := repository.NewMessageRepository(pdb)
 	chatRepo := repository.NewChatRepository(pdb)
+	attachmentRepo := repository.NewAttachmentRepository(pdb)
+
+	// Initialize services
+	msgService := services.NewMessageService(attachmentRepo, storageInst)
+	wsService := services.NewWsService(clientManager)
 
 	// Initialize handlers
 	authHandler := handlers.NewAuthHandler(userRepo, tokenRepo, jwtSecret, translator)
-	messageHandler := handlers.NewMessageHandler(messageRepo, userRepo, chatRepo, clientManager, translator)
+	messageHandler := handlers.NewMessageHandler(msgService, wsService, msgRepo, userRepo, chatRepo, attachmentRepo, storageInst, translator)
 	chatHandler := handlers.NewChatHandler(chatRepo, userRepo, clientManager, translator)
 	userHandler := handlers.NewUserHandler(userRepo, clientManager, storageInst, translator)
 	wsHandler := handlers.NewWebSocketHandler(clientManager, tokenRepo, translator, jwtSecret)

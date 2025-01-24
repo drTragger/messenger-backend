@@ -9,11 +9,10 @@ import (
 	"time"
 )
 
-var allowedExtensions = map[string]bool{
-	".jpg":  true,
-	".jpeg": true,
-	".png":  true,
-}
+const (
+	ProfilePicturesDir    = "profile_pictures"
+	MessageAttachmentsDir = "message_attachments"
+)
 
 type LocalStorage struct {
 	BasePath string
@@ -29,14 +28,14 @@ func newLocalStorage(basePath string) *LocalStorage {
 	return &LocalStorage{BasePath: basePath}
 }
 
-func (l *LocalStorage) SaveFile(fileName string, fileData io.Reader) (string, error) {
+func (l *LocalStorage) SaveFile(baseDir, fileName string, fileData io.Reader) (string, error) {
 	ext := filepath.Ext(fileName)
 	if !allowedExtensions[ext] {
 		return "", fmt.Errorf("unsupported file extension: %s", ext)
 	}
 
 	newFileName := fmt.Sprintf("%d%s", time.Now().UnixNano(), ext) // Unique timestamp-based name
-	filePath := l.buildFilePath(newFileName)
+	filePath := l.buildFilePath(baseDir, newFileName)
 
 	log.Printf("Saving file to: %s", filePath)
 
@@ -56,8 +55,8 @@ func (l *LocalStorage) SaveFile(fileName string, fileData io.Reader) (string, er
 	return newFileName, nil
 }
 
-func (l *LocalStorage) GetFile(fileName string) (string, error) {
-	filePath := l.buildFilePath(fileName)
+func (l *LocalStorage) GetFile(baseDir, fileName string) (string, error) {
+	filePath := l.buildFilePath(baseDir, fileName)
 
 	log.Printf("Fetching file from: %s", filePath)
 
@@ -68,9 +67,8 @@ func (l *LocalStorage) GetFile(fileName string) (string, error) {
 	return filePath, nil
 }
 
-func (l *LocalStorage) DeleteFile(fileName string) error {
-	// Build the absolute path to the file
-	filePath := l.buildFilePath(fileName)
+func (l *LocalStorage) DeleteFile(baseDir, fileName string) error {
+	filePath := l.buildFilePath(baseDir, fileName)
 
 	// Check if the file exists before trying to delete it
 	if _, err := os.Stat(filePath); os.IsNotExist(err) {
@@ -85,6 +83,14 @@ func (l *LocalStorage) DeleteFile(fileName string) error {
 	return nil
 }
 
-func (l *LocalStorage) buildFilePath(fileName string) string {
-	return filepath.Join(l.BasePath, filepath.FromSlash(fileName))
+func (l *LocalStorage) buildFilePath(baseDir, fileName string) string {
+	fullPath := filepath.Join(l.BasePath, baseDir)
+	if _, err := os.Stat(fullPath); os.IsNotExist(err) {
+		// Create the directory if it does not exist
+		err := os.MkdirAll(fullPath, os.ModePerm)
+		if err != nil {
+			panic(fmt.Errorf("failed to create directory '%s': %w", fullPath, err))
+		}
+	}
+	return filepath.Join(fullPath, filepath.FromSlash(fileName))
 }

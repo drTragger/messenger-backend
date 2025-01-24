@@ -3,19 +3,21 @@ package websocket
 import "time"
 
 const (
-	NewMessageEvent    = "newMessage"
-	EditMessageEvent   = "editMessage"
-	DeleteMessageEvent = "deleteMessage"
-	ReadMessageEvent   = "readMessage"
-	StatusChangeEvent  = "statusChange"
+	NewMessageEvent    = EventType("newMessage")
+	EditMessageEvent   = EventType("editMessage")
+	DeleteMessageEvent = EventType("deleteMessage")
+	ReadMessageEvent   = EventType("readMessage")
+	StatusChangeEvent  = EventType("statusChange")
 )
 
+type EventType string
+
 type Notification struct {
-	Event   string      `json:"event"`
+	Event   EventType   `json:"event"`
 	Message interface{} `json:"message"`
 }
 
-func NewNotification(event string, message interface{}) *Notification {
+func NewNotification(event EventType, message interface{}) *Notification {
 	return &Notification{
 		Event:   event,
 		Message: message,
@@ -23,7 +25,7 @@ func NewNotification(event string, message interface{}) *Notification {
 }
 
 type StatusChange struct {
-	Event    string    `json:"event"`
+	Event    EventType `json:"event"`
 	UserID   uint      `json:"userId"`
 	IsOnline bool      `json:"isOnline"`
 	LastSeen time.Time `json:"lastSeen"`

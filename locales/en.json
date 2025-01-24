@@ -46,7 +46,8 @@
       "show": "User retrieved successfully.",
       "get_online_list": "Online users retrieved successfully.",
       "update_picture": "Profile picture updated successfully.",
-      "delete_picture": "Profile picture deleted successfully."
+      "delete_picture": "Profile picture deleted successfully.",
+      "change_personal_info": "Personal info updated successfully."
     }
   },
   "validation": {

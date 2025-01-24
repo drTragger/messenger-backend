@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/drTragger/messenger-backend/internal/repository"
 	"github.com/drTragger/messenger-backend/internal/requests"
@@ -119,14 +120,14 @@ func (h *UserHandler) UpdateProfilePicture(w http.ResponseWriter, r *http.Reques
 
 	// Delete old profile picture if it exists
 	if user.ProfilePicture != nil {
-		err = h.Storage.DeleteFile(*user.ProfilePicture)
+		err = h.Storage.DeleteFile(storage.ProfilePicturesDir, *user.ProfilePicture)
 		if err != nil {
 			log.Printf("Failed to delete old profile picture %s: %v", *user.ProfilePicture, err)
 		}
 	}
 
 	// Use LocalStorage to save the file
-	filePath, err := h.Storage.SaveFile(handler.Filename, file)
+	filePath, err := h.Storage.SaveFile(storage.ProfilePicturesDir, handler.Filename, file)
 	if err != nil {
 		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 		return
@@ -161,7 +162,7 @@ func (h *UserHandler) DeleteProfilePicture(w http.ResponseWriter, r *http.Reques
 
 	// Delete old profile picture if it exists
 	if user.ProfilePicture != nil {
-		err = h.Storage.DeleteFile(*user.ProfilePicture)
+		err = h.Storage.DeleteFile(storage.ProfilePicturesDir, *user.ProfilePicture)
 		if err != nil {
 			responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
 			return
@@ -188,11 +189,46 @@ func (h *UserHandler) GetProfilePicture(w http.ResponseWriter, r *http.Request) 
 	}
 
 	// Get the file from storage
-	filePath, err := h.Storage.GetFile(fileName)
+	filePath, err := h.Storage.GetFile(storage.ProfilePicturesDir, fileName)
 	if err != nil {
 		responses.ErrorResponse(w, http.StatusNotFound, h.Trans.Translate(r, "errors.not_found", nil), fmt.Sprintf("File not found: %v", err))
 		return
 	}
 
 	responses.ServeFileResponse(w, r, filePath)
+}
+
+func (h *UserHandler) ChangePersonalInfo(w http.ResponseWriter, r *http.Request) {
+	var payload requests.ChangePersonalInfoRequest
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		responses.ErrorResponse(w, http.StatusBadRequest, h.Trans.Translate(r, "errors.input", nil), err.Error())
+		return
+	}
+
+	if err := utils.ValidateStruct(&payload); err != nil {
+		responses.ValidationResponse(w, h.Trans.Translate(r, "errors.validation", nil), utils.FormatValidationError(r, err, h.Trans))
+		return
+	}
+
+	userID := r.Context().Value("user_id").(uint)
+
+	user, err := h.UserRepo.GetUserByID(userID)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+	if user == nil {
+		responses.ErrorResponse(w, http.StatusNotFound, h.Trans.Translate(r, "errors.not_found", nil), fmt.Sprintf("User not found"))
+		return
+	}
+
+	err = h.UserRepo.ChangePersonalInfo(userID, payload.FirstName, payload.LastName)
+	if err != nil {
+		responses.ErrorResponse(w, http.StatusInternalServerError, h.Trans.Translate(r, "errors.server", nil), err.Error())
+		return
+	}
+	user.FirstName = &payload.FirstName
+	user.LastName = payload.LastName
+
+	responses.SuccessResponse(w, http.StatusOK, h.Trans.Translate(r, "success.user.change_personal_info", nil), user)
 }

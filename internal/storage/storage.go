@@ -6,17 +6,30 @@ import (
 )
 
 type Storage interface {
-	SaveFile(fileName string, fileData io.Reader) (string, error)
-	GetFile(fileName string) (string, error)
-	DeleteFile(fileName string) error
+	SaveFile(baseDir, fileName string, fileData io.Reader) (string, error)
+	GetFile(baseDir, fileName string) (string, error)
+	DeleteFile(baseDir, fileName string) error
 }
 
 type Type string
 
 const (
 	LocalStorageType Type = "local"
-	LocalStoragePath      = "./uploads/profile_pictures"
+	LocalStoragePath      = "./uploads"
 )
+
+var allowedExtensions = map[string]bool{
+	".jpg":  true,
+	".jpeg": true,
+	".png":  true,
+	".mov":  true,
+	".pdf":  true,
+	".doc":  true,
+	".docx": true,
+	".xls":  true,
+	".xlsx": true,
+	".txt":  true,
+}
 
 type Config struct {
 	Type      Type

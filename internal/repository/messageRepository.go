@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/drTragger/messenger-backend/internal/models"
+	"github.com/lib/pq"
 	"time"
 )
 
@@ -24,12 +25,12 @@ func NewMessageRepository(db *sql.DB) *MessageRepository {
 
 func (mr *MessageRepository) Create(msg *models.Message) (*models.Message, error) {
 	query := `
-		INSERT INTO messages (sender_id, recipient_id, content, chat_id, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, NOW(), NOW())
+		INSERT INTO messages (sender_id, recipient_id, content, chat_id, parent_id, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
 		RETURNING id, created_at, updated_at
 	`
 
-	err := mr.DB.QueryRow(query, msg.SenderID, msg.RecipientID, msg.Content, msg.ChatID).
+	err := mr.DB.QueryRow(query, msg.SenderID, msg.RecipientID, msg.Content, msg.ChatID, msg.ParentID).
 		Scan(&msg.ID, &msg.CreatedAt, &msg.UpdatedAt)
 	if err != nil {
 		return nil, err
@@ -90,49 +91,85 @@ func (mr *MessageRepository) GetChatMessages(chatID uint, limit, offset int) ([]
 			u1.id AS sender_id, 
 			u1.username AS sender_username,
 			u2.id AS recipient_id,
-			u2.username AS recipient_username
+			u2.username AS recipient_username,
+			p.id AS parent_id,
+			p.content AS parent_content
 		FROM messages m
-		JOIN chats c ON m.chat_id = c.id
-		JOIN users u1 ON m.sender_id = u1.id
-		JOIN users u2 ON m.recipient_id = u2.id
+			JOIN chats c ON m.chat_id = c.id
+			JOIN users u1 ON m.sender_id = u1.id
+			JOIN users u2 ON m.recipient_id = u2.id
+			LEFT JOIN messages p ON m.parent_id = p.id
 		WHERE c.id = $1
 		ORDER BY m.created_at DESC
 		LIMIT $2 OFFSET $3
 	`
 
-	// Query the database
 	rows, err := mr.DB.Query(query, chatID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	// Initialize a slice to hold the messages
 	messages := make([]*models.Message, 0)
+	messageIDs := make([]uint, 0)
 
-	// Iterate through the rows and scan the data into the struct
 	for rows.Next() {
 		var msg models.Message
 		var sender, recipient models.User
+		var parentMessage models.Message
+		var parentID sql.NullInt64
 
 		err := rows.Scan(
 			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
 			&sender.ID, &sender.Username,
 			&recipient.ID, &recipient.Username,
+			&parentID, &parentMessage.Content,
 		)
 		if err != nil {
-			return nil, err // Return if there's a scanning error
+			return nil, err
 		}
 
-		// Assign sender and recipient users to the message
+		if parentID.Valid {
+			parentMessage.ID = uint(parentID.Int64)
+			msg.Parent = &parentMessage
+		}
+
 		msg.Sender = &sender
 		msg.Recipient = &recipient
 		messages = append(messages, &msg)
+		messageIDs = append(messageIDs, msg.ID)
 	}
 
-	// Check for any errors encountered during iteration
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	attachmentsQuery := `
+		SELECT 
+			id, message_id, file_path, file_name, file_type, file_size
+		FROM attachments
+		WHERE message_id = ANY($1)
+	`
+	attachmentRows, err := mr.DB.Query(attachmentsQuery, pq.Array(messageIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer attachmentRows.Close()
+
+	attachmentsMap := make(map[uint][]*models.Attachment)
+	for attachmentRows.Next() {
+		var attachment models.Attachment
+		err := attachmentRows.Scan(
+			&attachment.ID, &attachment.MessageID, &attachment.FilePath, &attachment.FileName, &attachment.FileType, &attachment.FileSize,
+		)
+		if err != nil {
+			return nil, err
+		}
+		attachmentsMap[attachment.MessageID] = append(attachmentsMap[attachment.MessageID], &attachment)
+	}
+
+	for _, msg := range messages {
+		msg.Attachments = attachmentsMap[msg.ID]
 	}
 
 	return messages, nil
@@ -155,41 +192,66 @@ func (mr *MessageRepository) GetUserMessages(senderID uint, recipientID uint, li
 		FROM messages AS m
 		JOIN users AS u ON m.sender_id = u.id
 		WHERE m.sender_id = $1 AND m.recipient_id = $2
-		ORDER BY m.created_at desc 
+		ORDER BY m.created_at DESC 
 		LIMIT $3 OFFSET $4
 	`
 
-	// Execute the query
 	rows, err := mr.DB.Query(query, senderID, recipientID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	// Initialize a slice to hold the messages
 	messages := make([]*models.Message, 0)
+	messageIDs := make([]uint, 0)
 
-	// Iterate through the rows and scan data into the struct
 	for rows.Next() {
 		var msg models.Message
-		var user models.User // Assuming you want user data for the sender
+		var user models.User
 
 		err := rows.Scan(
 			&msg.ID, &msg.SenderID, &msg.RecipientID, &msg.Content, &msg.ReadAt, &msg.ChatID, &msg.CreatedAt, &msg.UpdatedAt,
 			&user.ID, &user.Username, &user.Phone,
 		)
 		if err != nil {
-			return nil, err // Return if there's a scanning error
+			return nil, err
 		}
 
-		// Assign the user to the message sender
 		msg.Sender = &user
 		messages = append(messages, &msg)
+		messageIDs = append(messageIDs, msg.ID)
 	}
 
-	// Check for any errors encountered during iteration
 	if err = rows.Err(); err != nil {
 		return nil, err
+	}
+
+	attachmentsQuery := `
+		SELECT 
+			id, message_id, file_path, file_name, file_type, file_size
+		FROM attachments
+		WHERE message_id = ANY($1)
+	`
+	attachmentRows, err := mr.DB.Query(attachmentsQuery, pq.Array(messageIDs))
+	if err != nil {
+		return nil, err
+	}
+	defer attachmentRows.Close()
+
+	attachmentsMap := make(map[uint][]*models.Attachment)
+	for attachmentRows.Next() {
+		var attachment models.Attachment
+		err := attachmentRows.Scan(
+			&attachment.ID, &attachment.MessageID, &attachment.FilePath, &attachment.FileName, &attachment.FileType, &attachment.FileSize,
+		)
+		if err != nil {
+			return nil, err
+		}
+		attachmentsMap[attachment.MessageID] = append(attachmentsMap[attachment.MessageID], &attachment)
+	}
+
+	for _, msg := range messages {
+		msg.Attachments = attachmentsMap[msg.ID]
 	}
 
 	return messages, nil
@@ -234,9 +296,18 @@ func (mr *MessageRepository) GetById(id uint) (*models.Message, error) {
 		WHERE id = $1
 	`
 
-	var m models.Message
+	var message models.Message
 
-	err := mr.DB.QueryRow(query, id).Scan(&m.ID, &m.SenderID, &m.RecipientID, &m.Content, &m.ReadAt, &m.ChatID, &m.CreatedAt, &m.UpdatedAt)
+	err := mr.DB.QueryRow(query, id).Scan(
+		&message.ID,
+		&message.SenderID,
+		&message.RecipientID,
+		&message.Content,
+		&message.ReadAt,
+		&message.ChatID,
+		&message.CreatedAt,
+		&message.UpdatedAt,
+	)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -245,7 +316,40 @@ func (mr *MessageRepository) GetById(id uint) (*models.Message, error) {
 		return nil, err
 	}
 
-	return &m, nil
+	attachmentsQuery := `
+		SELECT id, message_id, file_name, file_path, file_type, file_size, created_at, updated_at
+		FROM attachments
+		WHERE message_id = $1
+	`
+
+	rows, err := mr.DB.Query(attachmentsQuery, message.ID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var attachments []*models.Attachment
+	for rows.Next() {
+		var attachment models.Attachment
+		err := rows.Scan(
+			&attachment.ID,
+			&attachment.MessageID,
+			&attachment.FileName,
+			&attachment.FilePath,
+			&attachment.FileType,
+			&attachment.FileSize,
+			&attachment.CreatedAt,
+			&attachment.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		attachments = append(attachments, &attachment)
+	}
+
+	message.Attachments = attachments
+
+	return &message, nil
 }
 
 func (mr *MessageRepository) MarkAsRead(id uint) (*time.Time, error) {

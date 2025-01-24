@@ -30,12 +30,14 @@ func RegisterRoutes(r *mux.Router, authHandler *AuthHandler, messageHandler *Mes
 	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}", messageHandler.EditMessage).Methods("PATCH", "OPTIONS")
 	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}", messageHandler.DeleteMessage).Methods("DELETE", "OPTIONS")
 	authApiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}/read", messageHandler.MarkMessageRead).Methods("PATCH", "OPTIONS")
+	apiRouter.HandleFunc("/chats/{chatId}/messages/{messageId}/attachments/{filename}", messageHandler.GetAttachment).Methods("GET", "OPTIONS")
 
 	// User routes
 	authApiRouter.HandleFunc("/users", userHandler.GetUsers).Methods("GET", "OPTIONS")
 	apiRouter.HandleFunc("/users/profile-picture/{filename}", userHandler.GetProfilePicture).Methods("GET", "OPTIONS")
 	authApiRouter.HandleFunc("/users/profile-picture", userHandler.UpdateProfilePicture).Methods("PATCH", "OPTIONS")
 	authApiRouter.HandleFunc("/users/profile-picture", userHandler.DeleteProfilePicture).Methods("DELETE", "OPTIONS")
+	authApiRouter.HandleFunc("/users/personal-info", userHandler.ChangePersonalInfo).Methods("PATCH", "OPTIONS")
 
 	// WebSocket routes
 	r.HandleFunc("/ws", wsHandler.HandleWebSocket).Methods("GET")
